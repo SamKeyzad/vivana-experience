@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "Vivana | Discover Real Portugal",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <Navbar />
         <main className="pt-24">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
