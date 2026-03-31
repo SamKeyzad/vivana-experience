@@ -1,7 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -30,9 +28,7 @@ export default function RootLayout({
             gtag('config', 'G-65XG2K8L45');
           `}
         </Script>
-        <Navbar />
-        <main className="pt-24">{children}</main>
-        <Footer />
+        <main>{children}</main>
         <Analytics />
       </body>
     </html>
