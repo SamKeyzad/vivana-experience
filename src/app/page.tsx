@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase";
+import { supabase, getSupabase } from "@/lib/supabase";
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -68,9 +68,13 @@ export default function Home() {
 
   // Load session and listen for auth changes
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const sb = getSupabase();
+    if (!sb) return;
+
+    sb.auth.getSession().then(async ({ data }) => {
+      const session = data?.session;
       if (!session) return;
-      const { data: profile } = await supabase
+      const { data: profile } = await sb
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", session.user.id)
@@ -82,9 +86,9 @@ export default function Home() {
       });
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
       if (!session) { setUser(null); return; }
-      const { data: profile } = await supabase
+      const { data: profile } = await sb
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", session.user.id)
