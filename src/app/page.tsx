@@ -64,10 +64,11 @@ export default function Home() {
   const [menuOpen, setMenuOpen]     = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [user, setUser]         = useState<AppUser | null>(null);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const getCount = (id: string, total: number) => counts[id] ?? Math.min(5, total);
-  const bump = (id: string, total: number, dir: 1 | -1) =>
-    setCounts(prev => ({ ...prev, [id]: Math.min(total, Math.max(1, (prev[id] ?? Math.min(5, total)) + dir)) }));
+  const PAGE = 5;
+  const [offsets, setOffsets] = useState<Record<string, number>>({});
+  const getOffset = (id: string) => offsets[id] ?? 0;
+  const slide = (id: string, total: number, dir: 1 | -1) =>
+    setOffsets(prev => ({ ...prev, [id]: Math.min(total - PAGE, Math.max(0, (prev[id] ?? 0) + dir)) }));
   const barRef  = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -381,7 +382,8 @@ export default function Home() {
         {tab === "Experiences" && (
           <div id="experiences" className="mt-12 space-y-14">
             {experienceCategories.map(cat => {
-              const count = getCount(cat.id, cat.items.length);
+              const offset = getOffset(cat.id);
+              const visible = cat.items.slice(offset, offset + PAGE);
               return (
                 <div key={cat.id}>
                   <div className="flex items-start justify-between gap-4 mb-1">
@@ -390,17 +392,17 @@ export default function Home() {
                       <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <button type="button" onClick={() => bump(cat.id, cat.items.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                      <button type="button" onClick={() => slide(cat.id, cat.items.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                       </button>
-                      <span className="text-xs text-stone-400">{count}/{cat.items.length}</span>
-                      <button type="button" onClick={() => bump(cat.id, cat.items.length, 1)} disabled={count >= cat.items.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, cat.items.length)} of {cat.items.length}</span>
+                      <button type="button" onClick={() => slide(cat.id, cat.items.length, 1)} disabled={offset + PAGE >= cat.items.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                       </button>
                     </div>
                   </div>
                   <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {cat.items.slice(0, count).map(item => (
+                    {visible.map(item => (
                       <button key={item.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={item.image} alt={item.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
@@ -424,7 +426,8 @@ export default function Home() {
         {tab === "Services" && (
           <div id="services" className="mt-12 space-y-14">
             {serviceCategories.map(cat => {
-              const count = getCount(cat.id, cat.subcategories.length);
+              const offset = getOffset(cat.id);
+              const visible = cat.subcategories.slice(offset, offset + PAGE);
               return (
                 <div key={cat.id}>
                   <div className="flex items-start justify-between gap-4 mb-1">
@@ -433,17 +436,17 @@ export default function Home() {
                       <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <button type="button" onClick={() => bump(cat.id, cat.subcategories.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                      <button type="button" onClick={() => slide(cat.id, cat.subcategories.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                       </button>
-                      <span className="text-xs text-stone-400">{count}/{cat.subcategories.length}</span>
-                      <button type="button" onClick={() => bump(cat.id, cat.subcategories.length, 1)} disabled={count >= cat.subcategories.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, cat.subcategories.length)} of {cat.subcategories.length}</span>
+                      <button type="button" onClick={() => slide(cat.id, cat.subcategories.length, 1)} disabled={offset + PAGE >= cat.subcategories.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                       </button>
                     </div>
                   </div>
                   <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {cat.subcategories.slice(0, count).map(sub => (
+                    {visible.map(sub => (
                       <button key={sub.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={sub.image} alt={sub.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
@@ -468,7 +471,8 @@ export default function Home() {
       {/* ── Museums section ─────────────────────────────────────────────────── */}
       <section id="museums" className="mx-auto max-w-6xl px-6 pb-16">
         {(() => {
-          const count = getCount("museums", museums.length);
+          const offset = getOffset("museums");
+          const visible = museums.slice(offset, offset + PAGE);
           return (
             <>
               <div className="mb-6 flex items-start justify-between gap-4">
@@ -479,17 +483,17 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 pt-1">
-                  <button type="button" onClick={() => bump("museums", museums.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                  <button type="button" onClick={() => slide("museums", museums.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                   </button>
-                  <span className="text-xs text-stone-400">{count}/{museums.length}</span>
-                  <button type="button" onClick={() => bump("museums", museums.length, 1)} disabled={count >= museums.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                  <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, museums.length)} of {museums.length}</span>
+                  <button type="button" onClick={() => slide("museums", museums.length, 1)} disabled={offset + PAGE >= museums.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                   </button>
                 </div>
               </div>
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {museums.slice(0, count).map((museum) => (
+                {visible.map((museum) => (
                   <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                     <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                       <Image src={museum.image} alt={museum.name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
