@@ -65,10 +65,14 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [user, setUser]         = useState<AppUser | null>(null);
   const PAGE = 5;
-  const [offsets, setOffsets] = useState<Record<string, number>>({});
-  const getOffset = (id: string) => offsets[id] ?? 0;
+  type SliderState = { offset: number; dir: 1 | -1; tick: number };
+  const [sliders, setSliders] = useState<Record<string, SliderState>>({});
+  const getSlider = (id: string): SliderState => sliders[id] ?? { offset: 0, dir: 1, tick: 0 };
   const slide = (id: string, total: number, dir: 1 | -1) =>
-    setOffsets(prev => ({ ...prev, [id]: Math.min(total - PAGE, Math.max(0, (prev[id] ?? 0) + dir)) }));
+    setSliders(prev => {
+      const cur = prev[id] ?? { offset: 0, dir: 1, tick: 0 };
+      return { ...prev, [id]: { offset: Math.min(total - PAGE, Math.max(0, cur.offset + dir)), dir, tick: cur.tick + 1 } };
+    });
   const barRef  = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -382,8 +386,9 @@ export default function Home() {
         {tab === "Experiences" && (
           <div id="experiences" className="mt-12 space-y-14">
             {experienceCategories.map(cat => {
-              const offset = getOffset(cat.id);
+              const { offset, dir, tick } = getSlider(cat.id);
               const visible = cat.items.slice(offset, offset + PAGE);
+              const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
               return (
                 <div key={cat.id}>
                   <div className="flex items-start justify-between gap-4 mb-1">
@@ -401,7 +406,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                     {visible.map(item => (
                       <button key={item.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
@@ -426,8 +431,9 @@ export default function Home() {
         {tab === "Services" && (
           <div id="services" className="mt-12 space-y-14">
             {serviceCategories.map(cat => {
-              const offset = getOffset(cat.id);
+              const { offset, dir, tick } = getSlider(cat.id);
               const visible = cat.subcategories.slice(offset, offset + PAGE);
+              const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
               return (
                 <div key={cat.id}>
                   <div className="flex items-start justify-between gap-4 mb-1">
@@ -445,7 +451,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                     {visible.map(sub => (
                       <button key={sub.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
@@ -471,8 +477,9 @@ export default function Home() {
       {/* ── Museums section ─────────────────────────────────────────────────── */}
       <section id="museums" className="mx-auto max-w-6xl px-6 pb-16">
         {(() => {
-          const offset = getOffset("museums");
+          const { offset, dir, tick } = getSlider("museums");
           const visible = museums.slice(offset, offset + PAGE);
+          const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
           return (
             <>
               <div className="mb-6 flex items-start justify-between gap-4">
@@ -492,7 +499,7 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              <div key={tick} className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                 {visible.map((museum) => (
                   <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                     <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">

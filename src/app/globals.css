@@ -38,6 +38,17 @@ html {
     from { transform: scale(1); }
     to { transform: scale(1.05); }
   }
+
+  @keyframes slide-from-right {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes slide-from-left {
+    from { transform: translateX(-40px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  .slide-from-right { animation: slide-from-right 0.3s ease-out both; }
+  .slide-from-left  { animation: slide-from-left  0.3s ease-out both; }
   
   .bg-cover {
     animation: slow-zoom 15s ease-in-out infinite alternate;
