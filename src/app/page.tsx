@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabase, getSupabase } from "@/lib/supabase";
 import { museums } from "@/data/museums";
+import { experienceCategories } from "@/data/experiences";
+import { serviceCategories } from "@/data/services";
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -408,7 +410,7 @@ export default function Home() {
                   </div>
                   <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                     {visible.map(item => (
-                      <button key={item.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                      <Link key={item.slug} href={`/experiences/${item.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={item.image} alt={item.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
                         </div>
@@ -419,7 +421,7 @@ export default function Home() {
                             <span className="text-xs font-bold text-amber-700">€{item.price}<span className="font-normal text-stone-400">/guest</span></span>
                           </div>
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -453,7 +455,7 @@ export default function Home() {
                   </div>
                   <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                     {visible.map(sub => (
-                      <button key={sub.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                      <Link key={sub.slug} href={`/services/${sub.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={sub.image} alt={sub.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
                         </div>
@@ -464,7 +466,7 @@ export default function Home() {
                             <span className="text-xs font-bold text-amber-700">€{sub.price}<span className="font-normal text-stone-400">/guest</span></span>
                           </div>
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -758,69 +760,3 @@ function AuthModal({
   );
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const experienceCategories = [
-  {
-    id: "popular",
-    label: "Popular Experiences in Lisbon",
-    description: "The most loved activities visitors keep coming back for.",
-    items: [
-      { emoji: "🍷", title: "Wine & Petiscos Tasting", description: "Sample local wines paired with traditional Portuguese bites in a hidden Alfama cellar.", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=500&h=360&q=80", bookings: "312+", price: 45 },
-      { emoji: "🛶", title: "Tejo Sunset Boat Ride", description: "Drift along the Tagus at golden hour on a traditional wooden boat with a local skipper.", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=500&h=360&q=80", bookings: "198+", price: 65 },
-      { emoji: "🎸", title: "Live Fado Night", description: "Experience the soulful sound of Fado in an intimate neighbourhood tasca.", image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=500&h=360&q=80", bookings: "274+", price: 38 },
-      { emoji: "🧆", title: "Pastéis de Nata Workshop", description: "Learn the secrets of Portugal's most iconic pastry from a Belém baker.", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&h=360&q=80", bookings: "421+", price: 55 },
-      { emoji: "🚲", title: "Electric Bike City Tour", description: "Glide through Lisbon's seven hills with a knowledgeable local guide by your side.", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&h=360&q=80", bookings: "183+", price: 49 },
-      { emoji: "📸", title: "Hidden Viewpoints Walk", description: "Discover the city's best-kept miradouros away from the tourist crowds.", image: "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=500&h=360&q=80", bookings: "156+", price: 32 },
-      { emoji: "🚋", title: "Tram & History Tour", description: "Ride iconic Tram 28 with a local historian and uncover stories behind every stop.", image: "https://images.unsplash.com/photo-1545231027-637d2f6210f8?auto=format&fit=crop&w=500&h=360&q=80", bookings: "209+", price: 42 },
-      { emoji: "🐟", title: "Seafood Market Tour", description: "Explore Mercado da Ribeira with a local chef and taste the freshest catch of the day.", image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=500&h=360&q=80", bookings: "134+", price: 58 },
-    ],
-  },
-  {
-    id: "unique",
-    label: "Unique Activities",
-    description: "One-of-a-kind experiences you won't find in any guidebook.",
-    items: [
-      { emoji: "🎨", title: "Azulejo Tile Painting", description: "Create your own hand-painted azulejo tile to take home as a lasting memory.", image: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=500&h=360&q=80", bookings: "287+", price: 68 },
-      { emoji: "🏄", title: "Dawn Surf Session", description: "Catch waves at Cascais before the crowds arrive, with a certified surf coach.", image: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=500&h=360&q=80", bookings: "142+", price: 75 },
-      { emoji: "🧘", title: "Yoga at a Palace", description: "Start your morning with guided yoga in the grounds of a 17th-century palace.", image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=500&h=360&q=80", bookings: "119+", price: 40 },
-      { emoji: "🍽️", title: "Private Chef at Home", description: "A local chef cooks a seasonal Portuguese menu in your accommodation.", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=500&h=360&q=80", bookings: "103+", price: 120 },
-      { emoji: "🌿", title: "Sintra Forest Foraging", description: "Hunt wild herbs and mushrooms in the mystical forests of Sintra.", image: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=500&h=360&q=80", bookings: "128+", price: 52 },
-      { emoji: "🎭", title: "Street Art Deep Dive", description: "Explore LX Factory and hidden lanes with one of Lisbon's leading street artists.", image: "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?auto=format&fit=crop&w=500&h=360&q=80", bookings: "167+", price: 35 },
-      { emoji: "📷", title: "Sunset Rooftop Photography", description: "Shoot the city skyline at golden hour guided by a professional photographer.", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=500&h=360&q=80", bookings: "211+", price: 88 },
-      { emoji: "🪵", title: "Cork Craft Workshop", description: "Design your own cork accessory in a traditional workshop near Rossio.", image: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=500&h=360&q=80", bookings: "104+", price: 44 },
-    ],
-  },
-  {
-    id: "social",
-    label: "Gathering & Socialising",
-    description: "Shared experiences designed for groups, couples, and new friends.",
-    items: [
-      { emoji: "🎲", title: "Portuguese Board Game Night", description: "Join locals for an evening of traditional games, port wine, and laughter.", image: "https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&w=500&h=360&q=80", bookings: "176+", price: 30 },
-      { emoji: "🍻", title: "Craft Beer Crawl", description: "Visit four of Lisbon's best microbreweries with a passionate beer enthusiast.", image: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=500&h=360&q=80", bookings: "234+", price: 48 },
-      { emoji: "💃", title: "Salsa & Kizomba Class", description: "Learn the basics of Afro-Portuguese dance in a fun, no-pressure setting.", image: "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?auto=format&fit=crop&w=500&h=360&q=80", bookings: "189+", price: 36 },
-      { emoji: "🧑‍🍳", title: "Group Cooking Class", description: "Cook a full Portuguese feast with strangers who quickly become friends.", image: "https://images.unsplash.com/photo-1507048331197-7d4ac70811cf?auto=format&fit=crop&w=500&h=360&q=80", bookings: "302+", price: 72 },
-      { emoji: "🌅", title: "Sunrise Miradouro Picnic", description: "Watch the city wake up over coffee, cheese, and fresh bread on a hilltop.", image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=500&h=360&q=80", bookings: "145+", price: 33 },
-      { emoji: "🚣", title: "Kayak & Picnic Social", description: "Paddle the Tejo with a small group and share a riverside picnic afterwards.", image: "https://images.unsplash.com/photo-1472745942893-4b9f730c7668?auto=format&fit=crop&w=500&h=360&q=80", bookings: "118+", price: 55 },
-      { emoji: "🍷", title: "Wine Blending Evening", description: "Blend your own bottle of Portuguese wine with guidance from a local sommelier.", image: "https://images.unsplash.com/photo-1506377247417-fd7f21f44f5b?auto=format&fit=crop&w=500&h=360&q=80", bookings: "163+", price: 62 },
-      { emoji: "🌙", title: "Lantern Night Walk", description: "Wander Mouraria by lantern light and hear centuries of legend from a local storyteller.", image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=500&h=360&q=80", bookings: "127+", price: 38 },
-    ],
-  },
-];
-
-const serviceCategories = [
-  {
-    id: "lisbon-services",
-    label: "Services in Lisbon",
-    description: "Practical local services to make your time in Lisbon seamless.",
-    subcategories: [
-      { emoji: "🚗", title: "Airport Transfers", description: "Private door-to-door transfers with licensed local drivers.", image: "https://images.unsplash.com/photo-1474632384967-3e0d8bbe6af9?auto=format&fit=crop&w=500&h=360&q=80", bookings: "541+", price: 35 },
-      { emoji: "🏠", title: "Accommodation Advice", description: "Curated short-stay recommendations matched to your style and budget.", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=500&h=360&q=80", bookings: "214+", price: 40 },
-      { emoji: "👶", title: "Childcare & Babysitting", description: "Vetted, English-speaking babysitters available on short notice.", image: "https://images.unsplash.com/photo-1535572290543-960a8046f5af?auto=format&fit=crop&w=500&h=360&q=80", bookings: "138+", price: 30 },
-      { emoji: "🗣️", title: "Local Guide Rental", description: "Hire a knowledgeable local companion for a half or full day.", image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=500&h=360&q=80", bookings: "327+", price: 80 },
-      { emoji: "📦", title: "Luggage Storage & Delivery", description: "Store or forward your bags between hotels and airports stress-free.", image: "https://images.unsplash.com/photo-1553531889-e6cf4d692b1b?auto=format&fit=crop&w=500&h=360&q=80", bookings: "189+", price: 15 },
-      { emoji: "🍱", title: "Meal Planning & Grocery", description: "Stocked fridge on arrival and personalised meal-prep for your stay.", image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=500&h=360&q=80", bookings: "102+", price: 55 },
-      { emoji: "🎒", title: "Day-Trip Logistics", description: "Full planning and transport for Sintra, Setúbal, or the Alentejo.", image: "https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?auto=format&fit=crop&w=500&h=360&q=80", bookings: "256+", price: 90 },
-      { emoji: "💼", title: "Business Concierge", description: "Venue sourcing, translation, and meeting support for business travellers.", image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=500&h=360&q=80", bookings: "143+", price: 120 },
-    ],
-  },
-];
