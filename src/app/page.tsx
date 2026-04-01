@@ -64,8 +64,10 @@ export default function Home() {
   const [menuOpen, setMenuOpen]     = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [user, setUser]         = useState<AppUser | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [museumPage, setMuseumPage] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const getCount = (id: string, total: number) => counts[id] ?? Math.min(5, total);
+  const bump = (id: string, total: number, dir: 1 | -1) =>
+    setCounts(prev => ({ ...prev, [id]: Math.min(total, Math.max(1, (prev[id] ?? Math.min(5, total)) + dir)) }));
   const barRef  = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -379,14 +381,26 @@ export default function Home() {
         {tab === "Experiences" && (
           <div id="experiences" className="mt-12 space-y-14">
             {experienceCategories.map(cat => {
-              const isExpanded = expanded[cat.id];
-              const visible = isExpanded ? cat.items : cat.items.slice(0, 5);
+              const count = getCount(cat.id, cat.items.length);
               return (
                 <div key={cat.id}>
-                  <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
-                  <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div>
+                      <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
+                      <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 pt-1">
+                      <button type="button" onClick={() => bump(cat.id, cat.items.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
+                      </button>
+                      <span className="text-xs text-stone-400">{count}/{cat.items.length}</span>
+                      <button type="button" onClick={() => bump(cat.id, cat.items.length, 1)} disabled={count >= cat.items.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
+                      </button>
+                    </div>
+                  </div>
                   <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {visible.map(item => (
+                    {cat.items.slice(0, count).map(item => (
                       <button key={item.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={item.image} alt={item.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
@@ -401,15 +415,6 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                  {cat.items.length > 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}
-                      className="mt-5 text-sm font-semibold text-amber-700 hover:underline"
-                    >
-                      {isExpanded ? "Show less ↑" : `Show all ${cat.items.length} →`}
-                    </button>
-                  )}
                 </div>
               );
             })}
@@ -419,14 +424,26 @@ export default function Home() {
         {tab === "Services" && (
           <div id="services" className="mt-12 space-y-14">
             {serviceCategories.map(cat => {
-              const isExpanded = expanded[cat.id];
-              const visible = isExpanded ? cat.subcategories : cat.subcategories.slice(0, 5);
+              const count = getCount(cat.id, cat.subcategories.length);
               return (
                 <div key={cat.id}>
-                  <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
-                  <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div>
+                      <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
+                      <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 pt-1">
+                      <button type="button" onClick={() => bump(cat.id, cat.subcategories.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
+                      </button>
+                      <span className="text-xs text-stone-400">{count}/{cat.subcategories.length}</span>
+                      <button type="button" onClick={() => bump(cat.id, cat.subcategories.length, 1)} disabled={count >= cat.subcategories.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
+                      </button>
+                    </div>
+                  </div>
                   <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {visible.map(sub => (
+                    {cat.subcategories.slice(0, count).map(sub => (
                       <button key={sub.title} type="button" className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={sub.image} alt={sub.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
@@ -441,15 +458,6 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                  {cat.subcategories.length > 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}
-                      className="mt-5 text-sm font-semibold text-amber-700 hover:underline"
-                    >
-                      {isExpanded ? "Show less ↑" : `Show all ${cat.subcategories.length} →`}
-                    </button>
-                  )}
                 </div>
               );
             })}
@@ -458,74 +466,52 @@ export default function Home() {
       </section>
 
       {/* ── Museums section ─────────────────────────────────────────────────── */}
-      {(() => {
-        const PER_PAGE = 5;
-        const totalPages = Math.ceil(museums.length / PER_PAGE);
-        const visible = museums.slice(museumPage * PER_PAGE, museumPage * PER_PAGE + PER_PAGE);
-        return (
-          <section id="museums" className="mx-auto max-w-6xl px-6 pb-16">
-            <div className="mb-6 flex items-end justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-amber-900">Museums of Lisbon</h2>
-                <p className="mt-1 text-sm text-stone-500">
-                  From ancient tiles to contemporary art — {museums.length} museums to explore.
-                </p>
+      <section id="museums" className="mx-auto max-w-6xl px-6 pb-16">
+        {(() => {
+          const count = getCount("museums", museums.length);
+          return (
+            <>
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-amber-900">Museums of Lisbon</h2>
+                  <p className="mt-1 text-sm text-stone-500">
+                    From ancient tiles to contemporary art — {museums.length} museums to explore.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 pt-1">
+                  <button type="button" onClick={() => bump("museums", museums.length, -1)} disabled={count <= 1} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show less">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <span className="text-xs text-stone-400">{count}/{museums.length}</span>
+                  <button type="button" onClick={() => bump("museums", museums.length, 1)} disabled={count >= museums.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Show more">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMuseumPage(p => Math.max(0, p - 1))}
-                  disabled={museumPage === 0}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30"
-                  aria-label="Previous"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <span className="text-xs text-stone-400">{museumPage + 1} / {totalPages}</span>
-                <button
-                  type="button"
-                  onClick={() => setMuseumPage(p => Math.min(totalPages - 1, p + 1))}
-                  disabled={museumPage === totalPages - 1}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30"
-                  aria-label="Next"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-              </div>
-            </div>
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {visible.map((museum) => (
-                <Link
-                  key={museum.slug}
-                  href={`/museums/${museum.slug}`}
-                  className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
-                    <Image
-                      src={museum.image}
-                      alt={museum.name}
-                      fill
-                      className="object-cover transition group-hover:scale-105"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <h3 className="text-xs font-semibold text-stone-800 leading-snug">{museum.name}</h3>
-                    <div className="mt-1.5 flex items-center justify-between">
-                      <span className="text-[10px] text-stone-400">{museum.neighborhood.split("·")[0].trim()}</span>
-                      <span className="text-xs font-bold text-amber-700">
-                        {museum.price.adult === 0
-                          ? <span className="text-green-600">Free</span>
-                          : <>€{museum.price.adult}<span className="font-normal text-stone-400">/adult</span></>}
-                      </span>
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {museums.slice(0, count).map((museum) => (
+                  <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                      <Image src={museum.image} alt={museum.name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        );
-      })()}
+                    <div className="p-3">
+                      <h3 className="text-xs font-semibold text-stone-800 leading-snug">{museum.name}</h3>
+                      <div className="mt-1.5 flex items-center justify-between">
+                        <span className="text-[10px] text-stone-400">{museum.neighborhood.split("·")[0].trim()}</span>
+                        <span className="text-xs font-bold text-amber-700">
+                          {museum.price.adult === 0
+                            ? <span className="text-green-600">Free</span>
+                            : <>€{museum.price.adult}<span className="font-normal text-stone-400">/adult</span></>}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="bg-stone-900 text-stone-300">
