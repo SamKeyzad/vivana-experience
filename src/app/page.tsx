@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { supabase, getSupabase } from "@/lib/supabase";
+import { museums } from "@/data/museums";
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -353,6 +355,48 @@ export default function Home() {
               </button>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Museums section ─────────────────────────────────────────────────── */}
+      <section id="museums" className="mx-auto max-w-6xl px-6 py-16">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-amber-900">Museums of Lisbon</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            From ancient tiles to contemporary art — {museums.length} museums to explore.
+          </p>
+        </div>
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {museums.map((museum) => (
+            <Link
+              key={museum.slug}
+              href={`/museums/${museum.slug}`}
+              className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                <Image
+                  src={museum.image}
+                  alt={museum.name}
+                  fill
+                  className="object-cover transition group-hover:scale-105"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                />
+              </div>
+              <div className="p-3">
+                <h3 className="text-xs font-semibold text-stone-800 leading-snug">{museum.name}</h3>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <span className="text-[10px] text-stone-400">{museum.neighborhood.split("·")[0].trim()}</span>
+                  <span className="text-xs font-bold text-amber-700">
+                    {museum.price.adult === 0 ? (
+                      <span className="text-green-600">Free</span>
+                    ) : (
+                      <>€{museum.price.adult}<span className="font-normal text-stone-400">/adult</span></>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
