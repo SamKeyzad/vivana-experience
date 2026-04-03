@@ -19,6 +19,8 @@ export type Museum = {
   image: string;
   gallery: string[];
   highlights: string[];
+  temporarilyClosed?: boolean;
+  closureNote?: string;
 };
 
 export const museums: Museum[] = [
@@ -39,9 +41,11 @@ export const museums: Museum[] = [
     openingHours: "Tuesday–Sunday: 10:00–18:00",
     closedOn: "Mondays, 1 Jan, Easter Sunday, 1 May, 25 Dec",
     website: "https://www.mnazulejo.gov.pt",
-    image: "https://images.unsplash.com/photo-1558618047-3f12b6c69d8c?auto=format&fit=crop&w=800&q=80",
+    temporarilyClosed: true,
+    closureNote: "The museum is temporarily closed for renovation works. Check the official website for reopening dates.",
+    image: "/azulejo.jpg",
     gallery: [
-      "https://images.unsplash.com/photo-1558618047-3f12b6c69d8c?auto=format&fit=crop&w=700&q=80",
+      "/azulejo.jpg",
       "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=700&q=80",
       "https://images.unsplash.com/photo-1548199569-3e1c6aa8f469?auto=format&fit=crop&w=700&q=80",
       "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=700&q=80",
@@ -71,10 +75,12 @@ export const museums: Museum[] = [
     freeDays: "Every Sunday 10am–2pm · First Sunday of every month (all day)",
     openingHours: "Tuesday–Sunday: 10:00–18:00",
     closedOn: "Mondays, 1 Jan, Easter Sunday, 1 May, 25 Dec",
-    website: "https://www.museudearteantiga.pt",
-    image: "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=800&q=80",
+    website: "http://www.museudearteantiga.pt",
+    temporarilyClosed: true,
+    closureNote: "The museum is temporarily closed for renovation works. Check the official website for reopening dates.",
+    image: "/MNAA.jpeg",
     gallery: [
-      "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=700&q=80",
+      "/MNAA.jpeg",
       "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=700&q=80",
       "https://images.unsplash.com/photo-1579762593175-20226054cad0?auto=format&fit=crop&w=700&q=80",
       "https://images.unsplash.com/photo-1571990612082-b5e2a4f5d4de?auto=format&fit=crop&w=700&q=80",
@@ -166,17 +172,19 @@ export const museums: Museum[] = [
       "The rooftop of the new building — reached via a sloping public walkway — offers one of the best free viewpoints in Lisbon, looking out across the river to the Cristo Rei statue.",
     ],
     address: "Avenida Brasília, 1300-598 Lisboa",
-    price: { adult: 9, reduced: 4.5, child: "Free under 12", note: "Combined ticket for both buildings. Single building ticket: €5." },
-    freeDays: "Every Sunday for visitors 65+ · Rooftop walkway is always free",
+    price: {
+      adult: 11,
+      reduced: 11,
+      child: "Free under 12",
+      note: "Portugal residents: 11€ · Outside Portugal: 15€. Discounted rate (11€) applies for: seniors 65+, unemployed, and students 12+. Rooftop walkway is always free.",
+    },
+    freeDays: "Rooftop walkway always free · Discounted entry for seniors 65+",
     openingHours: "Monday, Wednesday–Sunday: 11:00–19:00",
     closedOn: "Tuesdays, 25 Dec",
     website: "https://www.maat.pt",
-    image: "https://images.unsplash.com/photo-1524654458049-e36be0721b0c?auto=format&fit=crop&w=800&q=80",
+    image: "/MAAT.JPG",
     gallery: [
-      "https://images.unsplash.com/photo-1524654458049-e36be0721b0c?auto=format&fit=crop&w=700&q=80",
-      "https://images.unsplash.com/photo-1579762593175-20226054cad0?auto=format&fit=crop&w=700&q=80",
-      "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=700&q=80",
-      "https://images.unsplash.com/photo-1558171813-5e74f6b44e5b?auto=format&fit=crop&w=700&q=80",
+      "/MAAT.JPG",
     ],
     highlights: [
       "Award-winning riverside building by AL_A architects",
@@ -368,7 +376,7 @@ export const museums: Museum[] = [
     freeDays: "Every day — permanent collection always free",
     openingHours: "Daily: 10:00–19:00",
     closedOn: "25 Dec, 1 Jan",
-    website: "https://www.museuberardo.pt",
+    website: "https://www.ccb.pt",
     image: "https://images.unsplash.com/photo-1579762593175-20226054cad0?auto=format&fit=crop&w=800&q=80",
     gallery: [
       "https://images.unsplash.com/photo-1579762593175-20226054cad0?auto=format&fit=crop&w=700&q=80",

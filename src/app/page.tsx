@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase, getSupabase } from "@/lib/supabase";
-import { museums } from "@/data/museums";
 import { experienceCategories } from "@/data/experiences";
 import { serviceCategories } from "@/data/services";
+import { museums } from "@/data/museums";
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -49,23 +50,46 @@ const CATEGORIES = [
   { label: "Day Trips",        emoji: "🚌" },
   { label: "Classes",          emoji: "🎓" },
   { label: "Cooking Classes",  emoji: "🧑‍🍳" },
-  { label: "Museums",          emoji: "🏛️" },
   { label: "Religious Sites",  emoji: "⛪" },
   { label: "Outdoor",          emoji: "🌿" },
   { label: "Food & Drink",     emoji: "🍷" },
 ];
 
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  "Tours":           ["tour", "walk", "tram", "viewpoints", "street art", "photography"],
+  "Day Trips":       ["sintra", "trip", "day"],
+  "Classes":         ["class", "workshop", "painting", "salsa", "kizomba", "craft"],
+  "Cooking Classes": ["cooking", "chef", "cook", "pastéis", "nata"],
+  "Religious Sites": ["church", "monastery", "cathedral", "religious"],
+  "Outdoor":         ["surf", "yoga", "forest", "kayak", "bike", "sunrise", "sunset", "rooftop", "miradouro", "lantern", "picnic", "foraging"],
+  "Food & Drink":    ["wine", "seafood", "food", "beer", "tasting", "petiscos", "fado", "board game", "blending"],
+};
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
+  const router = useRouter();
   const [panel, setPanel]           = useState<Panel>(null);
   const [tab, setTab]               = useState<"Experiences" | "Services">("Experiences");
   const [month, setMonth]           = useState(() => dayStart(new Date()));
   const [range, setRange]           = useState<DateRange>({ start: null, end: null });
   const [keyword, setKeyword]       = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [likedSlugs, setLikedSlugs] = useState<Set<string>>(new Set());
+
+  function toggleLike(e: React.MouseEvent, slug: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setLikedSlugs(prev => {
+      const next = new Set(prev);
+      next.has(slug) ? next.delete(slug) : next.add(slug);
+      return next;
+    });
+  }
   const [menuOpen, setMenuOpen]     = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>(null);
-  const [user, setUser]         = useState<AppUser | null>(null);
+  const [authMode, setAuthMode]     = useState<AuthMode>(null);
+  const [postAuthRedirect, setPostAuthRedirect] = useState<string | null>(null);
+  const [user, setUser]             = useState<AppUser | null>(null);
   const PAGE = 5;
   type SliderState = { offset: number; dir: 1 | -1; tick: number };
   const [sliders, setSliders] = useState<Record<string, SliderState>>({});
@@ -151,6 +175,16 @@ export default function Home() {
     : "Add dates";
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
+  function handleBecomeHost() {
+    if (user) {
+      router.push("/dashboard/become-host");
+    } else {
+      setPostAuthRedirect("/dashboard/become-host");
+      setAuthMode("signup");
+      setMenuOpen(false);
+    }
+  }
+
   function pickDate(day: Date) {
     const d = dayStart(day);
     setRange(prev => {
@@ -196,6 +230,13 @@ export default function Home() {
               <a href="#explore" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50">Explore</a>
               <button type="button" onClick={() => { setTab("Experiences"); setMenuOpen(false); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-stone-700 transition hover:bg-stone-50">Experiences</button>
               <button type="button" onClick={() => { setTab("Services"); setMenuOpen(false); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-stone-700 transition hover:bg-stone-50">Services</button>
+              <div className="my-1 border-t border-black/6" />
+              <button type="button" onClick={handleBecomeHost} className="flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 shrink-0">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Become a Host
+              </button>
             </nav>
             <div className="border-t border-black/8 p-2 space-y-1">
               {user ? (
@@ -204,6 +245,7 @@ export default function Home() {
                     <p className="text-xs text-stone-400">Signed in as</p>
                     <p className="text-sm font-semibold text-stone-800 truncate">{user.firstName} {user.lastName}</p>
                   </div>
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50">My Dashboard</Link>
                   <button type="button" onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50">Log out</button>
                 </>
               ) : (
@@ -221,15 +263,25 @@ export default function Home() {
       {authMode && (
         <AuthModal
           mode={authMode}
-          onClose={() => setAuthMode(null)}
-          onSuccess={(u: AppUser) => { setUser(u); setAuthMode(null); }}
+          onClose={() => { setAuthMode(null); setPostAuthRedirect(null); }}
+          onSuccess={(u: AppUser) => {
+            setUser(u);
+            setAuthMode(null);
+            if (postAuthRedirect) {
+              router.push(postAuthRedirect);
+              setPostAuthRedirect(null);
+            }
+          }}
           onSwitch={(m: AuthMode) => setAuthMode(m)}
+          redirectTo={postAuthRedirect ?? undefined}
         />
       )}
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 px-6 pt-28 pb-16 text-center text-white">
-        <div className="w-full max-w-3xl mx-auto">
+      <section className="relative px-6 pt-28 pb-16 text-center text-white overflow-hidden">
+        <Image src="/azulejo.jpg" alt="Azulejo tiles" fill className="object-cover" priority sizes="100vw" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-900/80 via-amber-800/70 to-stone-900/80" />
+        <div className="relative z-10 w-full max-w-3xl mx-auto">
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-300 mb-3">Lisbon · Portugal</p>
           <h1 className="text-4xl font-bold sm:text-5xl leading-tight">
             Discover the Real Lisbon
@@ -334,7 +386,12 @@ export default function Home() {
               <div className="flex items-center p-2">
                 <button
                   type="button"
-                  onClick={() => setPanel(null)}
+                  onClick={() => {
+                    setPanel(null);
+                    setSearchQuery(keyword);
+                    setActiveCategory(null);
+                    document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
+                  }}
                   aria-label="Search"
                   className="flex items-center justify-center rounded-full bg-amber-600 p-4 transition hover:bg-amber-700"
                 >
@@ -353,7 +410,14 @@ export default function Home() {
               <button
                 key={cat.label}
                 type="button"
-                onClick={() => setActiveCategory(c => c === cat.label ? null : cat.label)}
+                onClick={() => {
+                  const next = activeCategory === cat.label ? null : cat.label;
+                  setActiveCategory(next);
+                  setSearchQuery("");
+                  setKeyword("");
+                  setTab("Experiences");
+                  document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
+                }}
                 className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
                   activeCategory === cat.label
                     ? "bg-white text-amber-800 shadow-md"
@@ -362,6 +426,11 @@ export default function Home() {
               >
                 <span>{cat.emoji}</span>
                 {cat.label}
+                {activeCategory === cat.label && (
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                )}
               </button>
             ))}
           </div>
@@ -387,38 +456,128 @@ export default function Home() {
 
         {tab === "Experiences" && (
           <div id="experiences" className="mt-12 space-y-14">
-            {experienceCategories.map(cat => {
-              const { offset, dir, tick } = getSlider(cat.id);
-              const visible = cat.items.slice(offset, offset + PAGE);
+            {(() => {
+              const q = searchQuery.toLowerCase();
+              const kwds = activeCategory ? (CATEGORY_KEYWORDS[activeCategory] ?? [activeCategory.toLowerCase()]) : [];
+              const filtered = experienceCategories.map(cat => ({
+                ...cat,
+                items: cat.items.filter(item => {
+                  const t = item.title.toLowerCase();
+                  const matchSearch = !q || t.includes(q);
+                  const matchCat = !activeCategory || kwds.some(kw => t.includes(kw));
+                  return matchSearch && matchCat;
+                }),
+              })).filter(cat => cat.items.length > 0);
+
+              if (filtered.length === 0) return (
+                <div className="py-20 text-center text-stone-400">
+                  <p className="text-lg font-medium">No experiences found</p>
+                  <p className="mt-1 text-sm">Try a different search or category</p>
+                </div>
+              );
+
+              return filtered.map(cat => {
+                const { offset, dir, tick } = getSlider(cat.id);
+                const visible = cat.items.slice(offset, offset + PAGE);
+                const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
+                return (
+                  <div key={cat.id}>
+                    <div className="flex items-start justify-between gap-4 mb-1">
+                      <div>
+                        <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
+                        <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 pt-1">
+                        <button type="button" onClick={() => slide(cat.id, cat.items.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
+                        </button>
+                        <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, cat.items.length)} of {cat.items.length}</span>
+                        <button type="button" onClick={() => slide(cat.id, cat.items.length, 1)} disabled={offset + PAGE >= cat.items.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
+                      {visible.map(item => (
+                        <Link key={item.slug} href={`/experiences/${item.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                          <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                            <Image src={item.image} alt={item.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
+                            <button
+                              type="button"
+                              onClick={e => toggleLike(e, item.slug)}
+                              className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow transition hover:scale-110"
+                              aria-label={likedSlugs.has(item.slug) ? "Unlike" : "Like"}
+                            >
+                              <svg viewBox="0 0 24 24" className={`h-4 w-4 transition ${likedSlugs.has(item.slug) ? "fill-red-500 stroke-red-500" : "fill-none stroke-stone-500"}`} strokeWidth={2}>
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="p-3">
+                            <h3 className="text-xs font-semibold text-stone-800 leading-snug">{item.title}</h3>
+                            <div className="mt-1.5 flex items-center justify-between">
+                              <span className="text-[10px] text-stone-400">{item.bookings} booked</span>
+                              <span className="text-xs font-bold text-amber-700">€{item.price}<span className="font-normal text-stone-400">/guest</span></span>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+
+            {/* ── Museums of Lisbon ──────────────────────────────────────────── */}
+            {!activeCategory && !searchQuery && (() => {
+              const { offset, dir, tick } = getSlider("museums");
+              const visible = museums.slice(offset, offset + PAGE);
               const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
               return (
-                <div key={cat.id}>
+                <div>
                   <div className="flex items-start justify-between gap-4 mb-1">
                     <div>
-                      <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
-                      <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                      <h2 className="text-xl font-bold text-amber-900">Museums of Lisbon</h2>
+                      <p className="mt-1 text-sm text-stone-500">From ancient tiles to contemporary art — {museums.length} museums to explore.</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <button type="button" onClick={() => slide(cat.id, cat.items.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
+                      <button type="button" onClick={() => slide("museums", museums.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                       </button>
-                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, cat.items.length)} of {cat.items.length}</span>
-                      <button type="button" onClick={() => slide(cat.id, cat.items.length, 1)} disabled={offset + PAGE >= cat.items.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
+                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, museums.length)} of {museums.length}</span>
+                      <button type="button" onClick={() => slide("museums", museums.length, 1)} disabled={offset + PAGE >= museums.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                       </button>
                     </div>
                   </div>
                   <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
-                    {visible.map(item => (
-                      <Link key={item.slug} href={`/experiences/${item.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                    {visible.map(museum => (
+                      <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
-                          <Image src={item.image} alt={item.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
+                          <Image src={museum.image} alt={museum.name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
+                          {museum.temporarilyClosed && (
+                            <span className="absolute bottom-2 left-2 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
+                              Temporarily Closed
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={e => toggleLike(e, museum.slug)}
+                            className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow transition hover:scale-110"
+                            aria-label={likedSlugs.has(museum.slug) ? "Unlike" : "Like"}
+                          >
+                            <svg viewBox="0 0 24 24" className={`h-4 w-4 transition ${likedSlugs.has(museum.slug) ? "fill-red-500 stroke-red-500" : "fill-none stroke-stone-500"}`} strokeWidth={2}>
+                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                          </button>
                         </div>
                         <div className="p-3">
-                          <h3 className="text-xs font-semibold text-stone-800 leading-snug">{item.title}</h3>
+                          <h3 className="text-xs font-semibold text-stone-800 leading-snug">{museum.name}</h3>
                           <div className="mt-1.5 flex items-center justify-between">
-                            <span className="text-[10px] text-stone-400">{item.bookings} booked</span>
-                            <span className="text-xs font-bold text-amber-700">€{item.price}<span className="font-normal text-stone-400">/guest</span></span>
+                            <span className="text-[10px] text-stone-400">{museum.neighborhood.split("·")[0].trim()}</span>
+                            <span className="text-xs font-bold text-amber-700">
+                              {museum.price.adult === 0 ? <span className="text-green-600">Free</span> : <>€{museum.price.adult}<span className="font-normal text-stone-400">/adult</span></>}
+                            </span>
                           </div>
                         </div>
                       </Link>
@@ -426,15 +585,25 @@ export default function Home() {
                   </div>
                 </div>
               );
-            })}
+            })()}
           </div>
         )}
 
         {tab === "Services" && (
           <div id="services" className="mt-12 space-y-14">
             {serviceCategories.map(cat => {
+              const q = searchQuery.toLowerCase();
+              const filteredSubs = cat.subcategories.filter(sub =>
+                !q || sub.title.toLowerCase().includes(q)
+              );
+              if (filteredSubs.length === 0) return (
+                <div key={cat.id} className="py-20 text-center text-stone-400">
+                  <p className="text-lg font-medium">No services found</p>
+                  <p className="mt-1 text-sm">Try a different search term</p>
+                </div>
+              );
               const { offset, dir, tick } = getSlider(cat.id);
-              const visible = cat.subcategories.slice(offset, offset + PAGE);
+              const visible = filteredSubs.slice(offset, offset + PAGE);
               const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
               return (
                 <div key={cat.id}>
@@ -444,20 +613,30 @@ export default function Home() {
                       <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <button type="button" onClick={() => slide(cat.id, cat.subcategories.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
+                      <button type="button" onClick={() => slide(cat.id, filteredSubs.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                       </button>
-                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, cat.subcategories.length)} of {cat.subcategories.length}</span>
-                      <button type="button" onClick={() => slide(cat.id, cat.subcategories.length, 1)} disabled={offset + PAGE >= cat.subcategories.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
+                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, filteredSubs.length)} of {filteredSubs.length}</span>
+                      <button type="button" onClick={() => slide(cat.id, filteredSubs.length, 1)} disabled={offset + PAGE >= filteredSubs.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                       </button>
                     </div>
                   </div>
                   <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
                     {visible.map(sub => (
-                      <Link key={sub.slug} href={`/services/${sub.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                      <Link key={sub.slug} href={`/services/${sub.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={sub.image} alt={sub.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
+                          <button
+                            type="button"
+                            onClick={e => toggleLike(e, sub.slug)}
+                            className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow transition hover:scale-110"
+                            aria-label={likedSlugs.has(sub.slug) ? "Unlike" : "Like"}
+                          >
+                            <svg viewBox="0 0 24 24" className={`h-4 w-4 transition ${likedSlugs.has(sub.slug) ? "fill-red-500 stroke-red-500" : "fill-none stroke-stone-500"}`} strokeWidth={2}>
+                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                          </button>
                         </div>
                         <div className="p-3">
                           <h3 className="text-xs font-semibold text-stone-800 leading-snug">{sub.title}</h3>
@@ -476,54 +655,42 @@ export default function Home() {
         )}
       </section>
 
-      {/* ── Museums section ─────────────────────────────────────────────────── */}
-      <section id="museums" className="mx-auto max-w-6xl px-6 pb-16">
-        {(() => {
-          const { offset, dir, tick } = getSlider("museums");
-          const visible = museums.slice(offset, offset + PAGE);
-          const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
-          return (
-            <>
-              <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-amber-900">Museums of Lisbon</h2>
-                  <p className="mt-1 text-sm text-stone-500">
-                    From ancient tiles to contemporary art — {museums.length} museums to explore.
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 pt-1">
-                  <button type="button" onClick={() => slide("museums", museums.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
-                  </button>
-                  <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, museums.length)} of {museums.length}</span>
-                  <button type="button" onClick={() => slide("museums", museums.length, 1)} disabled={offset + PAGE >= museums.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
-                  </button>
-                </div>
+
+      {/* ── Become a Host CTA ───────────────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 px-6 py-20 text-center text-white">
+        <div className="mx-auto max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300 mb-3">For locals & professionals</p>
+          <h2 className="text-3xl font-bold sm:text-4xl leading-tight">
+            Share your skills.<br />Earn doing what you love.
+          </h2>
+          <p className="mt-4 text-sm text-white/60 max-w-lg mx-auto leading-relaxed">
+            Whether you&apos;re a chef, a photographer, a tour guide, or a personal trainer — Vivana connects you with guests who want exactly what you offer.
+          </p>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={handleBecomeHost}
+              className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-400"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Become a Host
+            </button>
+            <span className="text-xs text-white/40">Free to join · No monthly fees</span>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-6 text-center">
+            {[
+              { stat: "200+", label: "Active hosts" },
+              { stat: "4.9★", label: "Host satisfaction" },
+            ].map(item => (
+              <div key={item.label}>
+                <p className="text-2xl font-bold text-amber-300">{item.stat}</p>
+                <p className="mt-1 text-xs text-white/50">{item.label}</p>
               </div>
-              <div key={tick} className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
-                {visible.map((museum) => (
-                  <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
-                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
-                      <Image src={museum.image} alt={museum.name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
-                    </div>
-                    <div className="p-3">
-                      <h3 className="text-xs font-semibold text-stone-800 leading-snug">{museum.name}</h3>
-                      <div className="mt-1.5 flex items-center justify-between">
-                        <span className="text-[10px] text-stone-400">{museum.neighborhood.split("·")[0].trim()}</span>
-                        <span className="text-xs font-bold text-amber-700">
-                          {museum.price.adult === 0
-                            ? <span className="text-green-600">Free</span>
-                            : <>€{museum.price.adult}<span className="font-normal text-stone-400">/adult</span></>}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </>
-          );
-        })()}
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
@@ -582,14 +749,17 @@ function AuthModal({
   onClose,
   onSuccess,
   onSwitch,
+  redirectTo,
 }: {
   mode: AuthMode;
   onClose: () => void;
   onSuccess: (user: AppUser) => void;
   onSwitch: (mode: AuthMode) => void;
+  redirectTo?: string;
 }) {
   const [step, setStep]                   = useState(1);
   const [email, setEmail]                 = useState("");
+  const [role, setRole]                   = useState<"client" | "provider">("client");
   const [password, setPassword]           = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName]         = useState("");
@@ -604,6 +774,44 @@ function AuthModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  async function handleOAuth(provider: "google" | "apple") {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: redirectTo
+          ? `${window.location.origin}${redirectTo}`
+          : window.location.origin,
+      },
+    });
+  }
+
+  // ── Social buttons shared UI ──────────────────────────────────────────────
+  const SocialButtons = () => (
+    <div className="space-y-2.5">
+      <button
+        type="button"
+        onClick={() => handleOAuth("google")}
+        className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/12 bg-white px-4 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50"
+      >
+        {/* Google logo */}
+        <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+      <div className="flex items-center gap-3 py-1">
+        <div className="flex-1 border-t border-black/8" />
+        <span className="text-xs text-stone-400">or</span>
+        <div className="flex-1 border-t border-black/8" />
+      </div>
+    </div>
+  );
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -623,7 +831,7 @@ function AuthModal({
     setStep(2);
   }
 
-  async function handleSignupStep2(e: React.FormEvent) {
+  async function handleSignupStep3(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setLoading(true);
     if (!firstName.trim()) { setError("First name is required."); setLoading(false); return; }
@@ -633,12 +841,12 @@ function AuthModal({
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { first_name: firstName, last_name: lastName } },
+      options: { data: { first_name: firstName, last_name: lastName, role } },
     });
     if (signUpError) { setError(signUpError.message); setLoading(false); return; }
 
     setLoading(false);
-    setStep(3);
+    setStep(4);
   }
 
   const inputClass = "w-full rounded-xl border border-black/15 px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";
@@ -651,7 +859,7 @@ function AuthModal({
         {/* Close */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-stone-900">
-            {mode === "login" ? "Log in" : step === 3 ? "You're in! 🎉" : `Create account — Step ${step} of 2`}
+            {mode === "login" ? "Log in" : step === 4 ? "You're in! 🎉" : `Create account — Step ${step} of 3`}
           </h2>
           <button type="button" onClick={onClose} className="rounded-full p-1.5 text-stone-400 transition hover:bg-stone-100">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -663,6 +871,7 @@ function AuthModal({
         {/* ── Login ── */}
         {mode === "login" && (
           <form onSubmit={handleLogin} className="space-y-4">
+            <SocialButtons />
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-stone-500">Email</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} autoFocus />
@@ -688,7 +897,7 @@ function AuthModal({
         {/* ── Sign up step 1 — Email ── */}
         {mode === "signup" && step === 1 && (
           <form onSubmit={handleSignupStep1} className="space-y-4">
-            <p className="text-sm text-stone-500">Start with your email address.</p>
+            <SocialButtons />
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-stone-500">Email</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} autoFocus />
@@ -702,9 +911,40 @@ function AuthModal({
           </form>
         )}
 
-        {/* ── Sign up step 2 — Details ── */}
+        {/* ── Sign up step 2 — Role ── */}
         {mode === "signup" && step === 2 && (
-          <form onSubmit={handleSignupStep2} className="space-y-4">
+          <div className="space-y-4">
+            <p className="text-sm text-stone-500">How will you use Vivana?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRole("client")}
+                className={`rounded-2xl border-2 p-4 text-left transition ${role === "client" ? "border-amber-500 bg-amber-50" : "border-stone-200 hover:border-stone-300"}`}
+              >
+                <div className="mb-2 text-2xl">🗺️</div>
+                <p className={`text-sm font-semibold ${role === "client" ? "text-amber-800" : "text-stone-700"}`}>Guest</p>
+                <p className="mt-0.5 text-xs text-stone-400">Discover and book experiences</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole("provider")}
+                className={`rounded-2xl border-2 p-4 text-left transition ${role === "provider" ? "border-amber-500 bg-amber-50" : "border-stone-200 hover:border-stone-300"}`}
+              >
+                <div className="mb-2 text-2xl">🏷️</div>
+                <p className={`text-sm font-semibold ${role === "provider" ? "text-amber-800" : "text-stone-700"}`}>Provider</p>
+                <p className="mt-0.5 text-xs text-stone-400">List and sell your services</p>
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(1)} className="flex-1 rounded-full border border-black/15 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">← Back</button>
+              <button type="button" onClick={() => setStep(3)} className="flex-1 rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700">Continue →</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Sign up step 3 — Details ── */}
+        {mode === "signup" && step === 3 && (
+          <form onSubmit={handleSignupStep3} className="space-y-4">
             <p className="text-sm text-stone-500">Almost there — tell us a bit about yourself.</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -731,14 +971,14 @@ function AuthModal({
             </div>
             {error && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{error}</p>}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} disabled={loading} className="flex-1 rounded-full border border-black/15 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">← Back</button>
+              <button type="button" onClick={() => setStep(2)} disabled={loading} className="flex-1 rounded-full border border-black/15 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">← Back</button>
               <button type="submit" disabled={loading} className="flex-1 rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60">{loading ? "Creating…" : "Create account"}</button>
             </div>
           </form>
         )}
 
-        {/* ── Sign up step 3 — Success ── */}
-        {mode === "signup" && step === 3 && (
+        {/* ── Sign up step 4 — Success ── */}
+        {mode === "signup" && step === 4 && (
           <div className="space-y-5 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">✉️</div>
             <div>

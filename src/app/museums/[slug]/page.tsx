@@ -70,6 +70,23 @@ export default async function MuseumPage({
         </div>
       </div>
 
+      {/* ── Temporarily closed banner ───────────────────────────────────────── */}
+      {museum.temporarilyClosed && (
+        <div className="bg-red-50 border-b border-red-200 px-5 py-4">
+          <div className="mx-auto max-w-5xl flex items-start gap-3">
+            <span className="mt-0.5 shrink-0 text-red-500">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-red-700">Temporarily Closed</p>
+              {museum.closureNote && <p className="mt-0.5 text-sm text-red-600">{museum.closureNote}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Main content ────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl gap-10 px-5 py-10 lg:grid lg:grid-cols-3">
 
@@ -131,26 +148,49 @@ export default async function MuseumPage({
                 Admission
               </p>
               <div className="mt-2.5 space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stone-600">Adult</span>
-                  <span className="font-bold text-stone-900">
-                    {isFree ? (
-                      <span className="text-green-600">Free</span>
-                    ) : (
-                      `€${museum.price.adult.toFixed(2)}`
+                {museum.slug === "maat" ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">Portugal residents</span>
+                      <span className="font-bold text-stone-900">€11</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">Outside Portugal</span>
+                      <span className="font-bold text-stone-900">€15</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">65+, unemployed, students 12+</span>
+                      <span className="font-semibold text-stone-900">€11</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">Children</span>
+                      <span className="font-semibold text-stone-900">{museum.price.child}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">Adult</span>
+                      <span className="font-bold text-stone-900">
+                        {isFree ? (
+                          <span className="text-green-600">Free</span>
+                        ) : (
+                          `€${museum.price.adult.toFixed(2)}`
+                        )}
+                      </span>
+                    </div>
+                    {!isFree && museum.price.reduced > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-stone-600">Reduced</span>
+                        <span className="font-semibold text-stone-900">€{museum.price.reduced.toFixed(2)}</span>
+                      </div>
                     )}
-                  </span>
-                </div>
-                {!isFree && museum.price.reduced > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-stone-600">Reduced</span>
-                    <span className="font-semibold text-stone-900">€{museum.price.reduced.toFixed(2)}</span>
-                  </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">Children</span>
+                      <span className="font-semibold text-stone-900">{museum.price.child}</span>
+                    </div>
+                  </>
                 )}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stone-600">Children</span>
-                  <span className="font-semibold text-stone-900">{museum.price.child}</span>
-                </div>
               </div>
               {museum.price.note && (
                 <p className="mt-2 text-xs leading-relaxed text-stone-400">{museum.price.note}</p>
@@ -187,11 +227,21 @@ export default async function MuseumPage({
             <div className="border-t border-black/6" />
 
             {/* Book / website */}
+            {museum.temporarilyClosed && (
+              <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-center">
+                <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Temporarily Closed</p>
+                <p className="mt-1 text-xs text-red-500">Visits are not available at this time.</p>
+              </div>
+            )}
             <a
               href={museum.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full rounded-full bg-amber-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-amber-700"
+              className={`block w-full rounded-full py-3 text-center text-sm font-semibold transition ${
+                museum.temporarilyClosed
+                  ? "bg-stone-200 text-stone-500 cursor-default pointer-events-none"
+                  : "bg-amber-600 text-white hover:bg-amber-700"
+              }`}
             >
               Official Website &amp; Tickets →
             </a>
