@@ -33,7 +33,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.svg" />
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
       </head>
-      <body className="bg-white text-stone-800 font-sans">
+      <body suppressHydrationWarning className="bg-white text-stone-800 font-sans">
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-65XG2K8L45"
           strategy="afterInteractive"

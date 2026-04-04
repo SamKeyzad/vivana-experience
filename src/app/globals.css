@@ -16,22 +16,14 @@ html {
     backdrop-filter: blur(2px);
   }
   
-  nav a {
-    position: relative;
-    transition: color 0.2s ease-in-out;
+  a {
+    text-decoration: none;
   }
-  nav a::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -2px;
-    width: 0;
-    height: 2px;
-    background: oklch(70% 0.15 45);
-    transition: width 0.3s ease-in-out;
+  a:focus {
+    outline: none;
   }
-  nav a:hover::after {
-    width: 100%;
+  button:focus {
+    outline: none;
   }
   
   @keyframes slow-zoom {
@@ -39,16 +31,31 @@ html {
     to { transform: scale(1.05); }
   }
 
-  @keyframes slide-from-right {
-    from { transform: translateX(40px); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
+  @keyframes card-in-right {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
   }
-  @keyframes slide-from-left {
-    from { transform: translateX(-40px); opacity: 0; }
-    to   { transform: translateX(0);     opacity: 1; }
+  @keyframes card-in-left {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
   }
-  .slide-from-right { animation: slide-from-right 0.3s ease-out both; }
-  .slide-from-left  { animation: slide-from-left  0.3s ease-out both; }
+
+  .slide-from-right > *,
+  .slide-from-left  > * {
+    will-change: opacity, transform;
+    animation: card-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .slide-from-right > *:nth-child(1),
+  .slide-from-left  > *:nth-child(1) { animation-delay: 0ms; }
+  .slide-from-right > *:nth-child(2),
+  .slide-from-left  > *:nth-child(2) { animation-delay: 45ms; }
+  .slide-from-right > *:nth-child(3),
+  .slide-from-left  > *:nth-child(3) { animation-delay: 90ms; }
+  .slide-from-right > *:nth-child(4),
+  .slide-from-left  > *:nth-child(4) { animation-delay: 135ms; }
+  .slide-from-right > *:nth-child(5),
+  .slide-from-left  > *:nth-child(5) { animation-delay: 180ms; }
   
   .bg-cover {
     animation: slow-zoom 15s ease-in-out infinite alternate;

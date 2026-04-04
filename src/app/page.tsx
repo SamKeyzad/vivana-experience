@@ -65,6 +65,22 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   "Food & Drink":    ["wine", "seafood", "food", "beer", "tasting", "petiscos", "fado", "board game", "blending"],
 };
 
+const SERVICE_PILL_CATEGORIES = [
+  { label: "Driver",    emoji: "🚗", description: "Airport runs, day trips & private transport" },
+  { label: "Assistant", emoji: "🤝", description: "Local guides, concierge & personal help" },
+  { label: "Spa",       emoji: "🧖", description: "Massage, wellness & relaxation" },
+  { label: "Hair",      emoji: "✂️",  description: "Cuts, styling & colour" },
+  { label: "Nails",     emoji: "💅", description: "Manicure, pedicure & nail art" },
+];
+
+const SERVICE_KEYWORDS: Record<string, string[]> = {
+  "Driver":    ["airport", "transfer", "driver", "day-trip", "logistics", "transport"],
+  "Assistant": ["guide", "concierge", "accommodation", "luggage", "storage", "meal", "planning", "childcare", "babysitting", "business"],
+  "Spa":       ["spa", "massage", "wellness"],
+  "Hair":      ["hair", "barber", "styling"],
+  "Nails":     ["nail", "manicure", "pedicure"],
+};
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter();
@@ -75,6 +91,7 @@ export default function Home() {
   const [keyword, setKeyword]       = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeServiceCategory, setActiveServiceCategory] = useState<string | null>(null);
   const [likedSlugs, setLikedSlugs] = useState<Set<string>>(new Set());
 
   function toggleLike(e: React.MouseEvent, slug: string) {
@@ -195,7 +212,7 @@ export default function Home() {
     });
   }
 
-  const today = dayStart(new Date());
+  const [today] = useState(() => dayStart(new Date()));
   const grid  = buildGrid(month);
 
   return (
@@ -228,6 +245,7 @@ export default function Home() {
           <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-black/8 bg-white shadow-2xl">
             <nav className="p-2">
               <a href="#explore" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50">Explore</a>
+              <Link href="/access" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50">Access</Link>
               <button type="button" onClick={() => { setTab("Experiences"); setMenuOpen(false); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-stone-700 transition hover:bg-stone-50">Experiences</button>
               <button type="button" onClick={() => { setTab("Services"); setMenuOpen(false); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-stone-700 transition hover:bg-stone-50">Services</button>
               <div className="my-1 border-t border-black/6" />
@@ -406,33 +424,61 @@ export default function Home() {
 
           {/* ── Category pills ───────────────────────────────────────────────── */}
           <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.label}
-                type="button"
-                onClick={() => {
-                  const next = activeCategory === cat.label ? null : cat.label;
-                  setActiveCategory(next);
-                  setSearchQuery("");
-                  setKeyword("");
-                  setTab("Experiences");
-                  document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeCategory === cat.label
-                    ? "bg-white text-amber-800 shadow-md"
-                    : "bg-white/15 text-white hover:bg-white/25"
-                }`}
-              >
-                <span>{cat.emoji}</span>
-                {cat.label}
-                {activeCategory === cat.label && (
-                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                )}
-              </button>
-            ))}
+            {tab === "Services"
+              ? SERVICE_PILL_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.label}
+                    type="button"
+                    onClick={() => {
+                      const next = activeServiceCategory === cat.label ? null : cat.label;
+                      setActiveServiceCategory(next);
+                      setSearchQuery("");
+                      setKeyword("");
+                      document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
+                      activeServiceCategory === cat.label
+                        ? "bg-white text-amber-800 shadow-md"
+                        : "bg-white/15 text-white hover:bg-white/25"
+                    }`}
+                  >
+                    <span>{cat.emoji}</span>
+                    {cat.label}
+                    {activeServiceCategory === cat.label && (
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    )}
+                  </button>
+                ))
+              : CATEGORIES.map(cat => (
+                  <button
+                    key={cat.label}
+                    type="button"
+                    onClick={() => {
+                      const next = activeCategory === cat.label ? null : cat.label;
+                      setActiveCategory(next);
+                      setSearchQuery("");
+                      setKeyword("");
+                      setTab("Experiences");
+                      document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
+                      activeCategory === cat.label
+                        ? "bg-white text-amber-800 shadow-md"
+                        : "bg-white/15 text-white hover:bg-white/25"
+                    }`}
+                  >
+                    <span>{cat.emoji}</span>
+                    {cat.label}
+                    {activeCategory === cat.label && (
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    )}
+                  </button>
+                ))
+            }
           </div>
         </div>
       </section>
@@ -497,7 +543,7 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                    <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
+                    <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${anim}`}>
                       {visible.map(item => (
                         <Link key={item.slug} href={`/experiences/${item.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                           <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
@@ -550,7 +596,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
+                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${anim}`}>
                     {visible.map(museum => (
                       <Link key={museum.slug} href={`/museums/${museum.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
@@ -590,49 +636,86 @@ export default function Home() {
         )}
 
         {tab === "Services" && (
-          <div id="services" className="mt-12 space-y-14">
-            {serviceCategories.map(cat => {
+          <div id="services" className="mt-12">
+
+            {/* ── Category tiles ──────────────────────────────────────────────── */}
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-12">
+              {SERVICE_PILL_CATEGORIES.map(cat => {
+                const isActive = activeServiceCategory === cat.label;
+                return (
+                  <button
+                    key={cat.label}
+                    type="button"
+                    onClick={() => setActiveServiceCategory(isActive ? null : cat.label)}
+                    className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${
+                      isActive
+                        ? "border-amber-300 bg-amber-50 shadow-sm"
+                        : "border-black/8 bg-white hover:border-amber-200"
+                    }`}
+                  >
+                    <span className="text-2xl">{cat.emoji}</span>
+                    <span className={`text-xs font-semibold ${isActive ? "text-amber-800" : "text-stone-700"}`}>
+                      {cat.label}
+                    </span>
+                    <span className="text-[10px] text-stone-400 leading-tight hidden sm:block">{cat.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Service cards ───────────────────────────────────────────────── */}
+            {(() => {
               const q = searchQuery.toLowerCase();
-              const filteredSubs = cat.subcategories.filter(sub =>
-                !q || sub.title.toLowerCase().includes(q)
-              );
-              if (filteredSubs.length === 0) return (
-                <div key={cat.id} className="py-20 text-center text-stone-400">
-                  <p className="text-lg font-medium">No services found</p>
-                  <p className="mt-1 text-sm">Try a different search term</p>
+              const kwds = activeServiceCategory ? (SERVICE_KEYWORDS[activeServiceCategory] ?? []) : [];
+              const allServices = serviceCategories.flatMap(cat => cat.subcategories);
+              const filtered = allServices.filter(sub => {
+                const t = sub.title.toLowerCase();
+                const matchSearch = !q || t.includes(q);
+                const matchCat = !activeServiceCategory || kwds.some(kw => t.includes(kw));
+                return matchSearch && matchCat;
+              });
+
+              if (filtered.length === 0) return (
+                <div className="py-20 text-center text-stone-400">
+                  <p className="text-lg font-medium">No services in this category yet</p>
+                  <p className="mt-1 text-sm">More coming soon — check back shortly</p>
                 </div>
               );
-              const { offset, dir, tick } = getSlider(cat.id);
-              const visible = filteredSubs.slice(offset, offset + PAGE);
+
+              const sliderId = activeServiceCategory ?? "all-services";
+              const { offset, dir, tick } = getSlider(sliderId);
+              const visible = filtered.slice(offset, offset + PAGE);
               const anim = tick === 0 ? "" : dir === 1 ? "slide-from-right" : "slide-from-left";
+
               return (
-                <div key={cat.id}>
-                  <div className="flex items-start justify-between gap-4 mb-1">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
                     <div>
-                      <h2 className="text-xl font-bold text-amber-900">{cat.label}</h2>
-                      <p className="mt-1 text-sm text-stone-500">{cat.description}</p>
+                      <h2 className="text-xl font-bold text-amber-900">
+                        {activeServiceCategory ?? "All Services"}
+                      </h2>
+                      <p className="mt-1 text-sm text-stone-500">
+                        {activeServiceCategory
+                          ? SERVICE_PILL_CATEGORIES.find(c => c.label === activeServiceCategory)?.description
+                          : "Practical local services to make your time in Lisbon seamless."}
+                      </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <button type="button" onClick={() => slide(cat.id, filteredSubs.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button type="button" onClick={() => slide(sliderId, filtered.length, -1)} disabled={offset === 0} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Previous">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6"/></svg>
                       </button>
-                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, filteredSubs.length)} of {filteredSubs.length}</span>
-                      <button type="button" onClick={() => slide(cat.id, filteredSubs.length, 1)} disabled={offset + PAGE >= filteredSubs.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
+                      <span className="text-xs text-stone-400">{offset + 1}–{Math.min(offset + PAGE, filtered.length)} of {filtered.length}</span>
+                      <button type="button" onClick={() => slide(sliderId, filtered.length, 1)} disabled={offset + PAGE >= filtered.length} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-stone-500 transition hover:bg-stone-100 disabled:opacity-30" aria-label="Next">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
                       </button>
                     </div>
                   </div>
-                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 overflow-hidden ${anim}`}>
+                  <div key={tick} className={`mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${anim}`}>
                     {visible.map(sub => (
                       <Link key={sub.slug} href={`/services/${sub.slug}`} className="group relative flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
                           <Image src={sub.image} alt={sub.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw" />
-                          <button
-                            type="button"
-                            onClick={e => toggleLike(e, sub.slug)}
-                            className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow transition hover:scale-110"
-                            aria-label={likedSlugs.has(sub.slug) ? "Unlike" : "Like"}
-                          >
+                          <button type="button" onClick={e => toggleLike(e, sub.slug)} className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow transition hover:scale-110" aria-label={likedSlugs.has(sub.slug) ? "Unlike" : "Like"}>
                             <svg viewBox="0 0 24 24" className={`h-4 w-4 transition ${likedSlugs.has(sub.slug) ? "fill-red-500 stroke-red-500" : "fill-none stroke-stone-500"}`} strokeWidth={2}>
                               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
@@ -650,11 +733,66 @@ export default function Home() {
                   </div>
                 </div>
               );
-            })}
+            })()}
           </div>
         )}
       </section>
 
+
+      {/* ── Access ──────────────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <div>
+            <h2 className="text-xl font-bold text-amber-900">Access</h2>
+            <p className="mt-1 text-sm text-stone-500">Field notes from inside Lisbon — stories about language, belonging, and what it means to really live here.</p>
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 grid-cols-2">
+          {[
+            {
+              href: "/access/learning-portuguese",
+              image: "/people_cafe.jpg",
+              alt: "People at a Lisbon café",
+              category: "Language & Belonging",
+              readTime: "5 min read",
+              title: "Learning Portuguese Changed How I See Lisbon",
+              intro: "There's a moment every expat in Lisbon knows. You're sitting in a café, coffee in hand, and the table next to you erupts in laughter.",
+            },
+            {
+              href: "/access/you-came-for-the-weather",
+              image: "/lisbon_weather.jpg",
+              alt: "Lisbon weather",
+              category: "On Staying",
+              readTime: "5 min read",
+              title: "You Came for the Weather. You Stayed for Something Else.",
+              intro: "Everyone has a reason they first come to Lisbon. Usually it's practical. The weather gets you here. Something else keeps you.",
+            },
+          ].map(card => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white transition hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                <Image
+                  src={card.image}
+                  alt={card.alt}
+                  fill
+                  className="object-cover transition group-hover:scale-105"
+                  sizes="(max-width: 1024px) 50vw, 480px"
+                />
+              </div>
+              <div className="p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">
+                  {card.category} · {card.readTime}
+                </p>
+                <h3 className="mt-1.5 text-xs font-semibold text-stone-800 leading-snug">{card.title}</h3>
+                <p className="mt-1.5 text-[11px] text-stone-400 leading-relaxed line-clamp-2">{card.intro}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ── Become a Host CTA ───────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-amber-900 via-amber-800 to-stone-900 px-6 py-20 text-center text-white">
@@ -711,6 +849,7 @@ export default function Home() {
               <li><a href="#explore" className="transition hover:text-white">Home</a></li>
               <li><button type="button" onClick={() => { setTab("Experiences"); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="transition hover:text-white">Experiences</button></li>
               <li><button type="button" onClick={() => { setTab("Services"); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="transition hover:text-white">Services</button></li>
+              <li><Link href="/access" className="transition hover:text-white">Access</Link></li>
             </ul>
           </div>
 
@@ -734,7 +873,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="border-t border-stone-800 px-6 py-5 text-center text-xs text-stone-600">
+        <div suppressHydrationWarning className="border-t border-stone-800 px-6 py-5 text-center text-xs text-stone-600">
           © {new Date().getFullYear()} Vivana. All rights reserved.
         </div>
       </footer>
