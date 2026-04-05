@@ -638,31 +638,6 @@ export default function Home() {
         {tab === "Services" && (
           <div id="services" className="mt-12">
 
-            {/* ── Category tiles ──────────────────────────────────────────────── */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-12">
-              {SERVICE_PILL_CATEGORIES.map(cat => {
-                const isActive = activeServiceCategory === cat.label;
-                return (
-                  <button
-                    key={cat.label}
-                    type="button"
-                    onClick={() => setActiveServiceCategory(isActive ? null : cat.label)}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${
-                      isActive
-                        ? "border-amber-300 bg-amber-50 shadow-sm"
-                        : "border-black/8 bg-white hover:border-amber-200"
-                    }`}
-                  >
-                    <span className="text-2xl">{cat.emoji}</span>
-                    <span className={`text-xs font-semibold ${isActive ? "text-amber-800" : "text-stone-700"}`}>
-                      {cat.label}
-                    </span>
-                    <span className="text-[10px] text-stone-400 leading-tight hidden sm:block">{cat.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             {/* ── Service cards ───────────────────────────────────────────────── */}
             {(() => {
               const q = searchQuery.toLowerCase();
