@@ -117,6 +117,22 @@ export default function Home() {
       return { ...prev, [id]: { offset: Math.min(total - PAGE, Math.max(0, cur.offset + dir)), dir, tick: cur.tick + 1 } };
     });
   const barRef  = useRef<HTMLDivElement>(null);
+  const [pwaTab, setPwaTab]               = useState<"ios" | "android">("ios");
+  const [nlEmail, setNlEmail]             = useState("");
+  const [nlStatus, setNlStatus]           = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  async function handleNewsletterSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nlEmail.trim()) return;
+    setNlStatus("loading");
+    const { error } = await supabase.from("newsletter_subscribers").insert({ email: nlEmail.trim() });
+    if (error && error.code !== "23505") { // 23505 = unique violation (already subscribed)
+      setNlStatus("error");
+    } else {
+      setNlStatus("success");
+      setNlEmail("");
+    }
+  }
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Load session and listen for auth changes
@@ -803,6 +819,117 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Add to Home Screen ──────────────────────────────────────────────── */}
+      <section className="border-t border-black/8 bg-white">
+        <div className="mx-auto max-w-5xl px-5 py-14">
+          <div className="text-center mb-8">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-2">Best Experience</p>
+            <h2 className="text-2xl font-bold text-stone-900">Add Vivana to your home screen</h2>
+            <p className="mt-2 text-sm text-stone-500 max-w-md mx-auto">
+              Install the app for instant access — no app store needed. Works offline and loads fast.
+            </p>
+          </div>
+
+          <div className="mx-auto max-w-md">
+            {/* Tabs */}
+            <div className="flex rounded-xl border border-black/8 bg-stone-100 p-1 mb-6">
+              {(["ios", "android"] as const).map(platform => (
+                <button
+                  key={platform}
+                  type="button"
+                  onClick={() => setPwaTab(platform)}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition ${
+                    pwaTab === platform
+                      ? "bg-white shadow-sm text-stone-900"
+                      : "text-stone-500 hover:text-stone-700"
+                  }`}
+                >
+                  {platform === "ios" ? "iPhone / iPad" : "Android"}
+                </button>
+              ))}
+            </div>
+
+            {/* Steps */}
+            <div className="rounded-2xl border border-black/8 bg-stone-50 p-6">
+              {pwaTab === "ios" ? (
+                <ol className="space-y-4">
+                  {[
+                    { step: "1", text: "Open Safari and visit vivana.com" },
+                    { step: "2", text: "Tap the Share icon at the bottom of the screen" },
+                    { step: "3", text: `Scroll down and tap \u201cAdd to Home Screen\u201d` },
+                    { step: "4", text: "Tap Add — Vivana appears on your home screen" },
+                  ].map(item => (
+                    <li key={item.step} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
+                        {item.step}
+                      </span>
+                      <p className="text-sm text-stone-600 leading-relaxed">{item.text}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <ol className="space-y-4">
+                  {[
+                    { step: "1", text: "Open Chrome and visit vivana.com" },
+                    { step: "2", text: "Tap the three-dot menu in the top-right corner" },
+                    { step: "3", text: `Tap \u201cAdd to Home screen\u201d or \u201cInstall app\u201d` },
+                    { step: "4", text: "Confirm — Vivana will appear on your home screen" },
+                  ].map(item => (
+                    <li key={item.step} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
+                        {item.step}
+                      </span>
+                      <p className="text-sm text-stone-600 leading-relaxed">{item.text}</p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Newsletter ──────────────────────────────────────────────────────── */}
+      <section className="relative px-6 py-16 text-center text-white overflow-hidden">
+        <Image src="/azulejo.jpg" alt="Azulejo tiles" fill className="object-cover" sizes="100vw" />
+        <div className="absolute inset-0 bg-gradient-to-br from-stone-900/90 via-amber-900/80 to-stone-900/90" />
+        <div className="relative z-10 max-w-lg mx-auto">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-300 mb-3">Stay in the loop</p>
+          <h2 className="text-2xl font-bold leading-snug">Deals &amp; Lisbon stories, straight to your inbox</h2>
+          <p className="mt-3 text-sm text-white/65">
+            Occasional emails — local picks, insider tips, and early access to new experiences. No spam, ever.
+          </p>
+          <form onSubmit={handleNewsletterSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            {nlStatus === "success" ? (
+              <div className="w-full rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 text-center text-sm font-medium text-amber-800">
+                You&apos;re in. Expect only the good stuff.
+              </div>
+            ) : (
+              <>
+                <input
+                  type="email"
+                  required
+                  value={nlEmail}
+                  onChange={e => setNlEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-amber-400 focus:bg-white/15 focus:ring-2 focus:ring-amber-400/30"
+                />
+                <button
+                  type="submit"
+                  disabled={nlStatus === "loading"}
+                  className="rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 active:scale-95"
+                >
+                  {nlStatus === "loading" ? "Saving…" : "Subscribe"}
+                </button>
+              </>
+            )}
+            {nlStatus === "error" && (
+              <p className="w-full text-center text-xs text-red-300 mt-1">Something went wrong — please try again.</p>
+            )}
+          </form>
         </div>
       </section>
 

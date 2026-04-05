@@ -1,16 +1,22 @@
 "use client";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
-    // TODO: wire to backend — for now just show success
-    setStatus("success");
-    setEmail("");
+    setStatus("loading");
+    const { error } = await supabase.from("newsletter_subscribers").insert({ email: email.trim() });
+    if (error && error.code !== "23505") { // 23505 = already subscribed
+      setStatus("error");
+    } else {
+      setStatus("success");
+      setEmail("");
+    }
   }
 
   return (
@@ -27,15 +33,19 @@ export default function NewsletterForm() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="your@email.com"
-            className="flex-1 rounded-full border border-black/10 bg-white px-5 py-3 text-sm text-stone-800 outline-none placeholder:text-stone-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+            className="flex-1 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-amber-400 focus:bg-white/15 focus:ring-2 focus:ring-amber-400/30"
           />
           <button
             type="submit"
-            className="rounded-full bg-amber-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 active:scale-95"
+            disabled={status === "loading"}
+            className="rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 active:scale-95"
           >
-            Subscribe
+            {status === "loading" ? "Saving…" : "Subscribe"}
           </button>
         </>
+      )}
+      {status === "error" && (
+        <p className="w-full text-center text-xs text-red-300 mt-1">Something went wrong — please try again.</p>
       )}
     </form>
   );
