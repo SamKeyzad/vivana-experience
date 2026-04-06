@@ -127,15 +127,21 @@ export default function Home() {
     setNlStatus("loading");
     try {
       const sb = getSupabase();
-      if (!sb) { setNlStatus("success"); setNlEmail(""); return; }
+      if (!sb) { setNlStatus("error"); return; }
       const { error } = await sb.from("newsletter_subscribers").insert({ email: nlEmail.trim() });
-      if (error && error.code !== "23505") {
-        setNlStatus("error");
+      if (error) {
+        if (error.code === "23505") {
+          setNlStatus("success"); setNlEmail("");
+        } else {
+          console.error("Newsletter insert error:", error.code, error.message);
+          setNlStatus("error");
+        }
       } else {
         setNlStatus("success");
         setNlEmail("");
       }
-    } catch {
+    } catch (err) {
+      console.error("Newsletter submit exception:", err);
       setNlStatus("error");
     }
   }

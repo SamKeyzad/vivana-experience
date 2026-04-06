@@ -12,15 +12,22 @@ export default function NewsletterForm() {
     setStatus("loading");
     try {
       const sb = getSupabase();
-      if (!sb) { setStatus("success"); setEmail(""); return; }
+      if (!sb) { setStatus("error"); return; }
       const { error } = await sb.from("newsletter_subscribers").insert({ email: email.trim() });
-      if (error && error.code !== "23505") {
-        setStatus("error");
+      if (error) {
+        if (error.code === "23505") {
+          // Already subscribed — treat as success
+          setStatus("success"); setEmail("");
+        } else {
+          console.error("Newsletter insert error:", error.code, error.message);
+          setStatus("error");
+        }
       } else {
         setStatus("success");
         setEmail("");
       }
-    } catch {
+    } catch (err) {
+      console.error("Newsletter submit exception:", err);
       setStatus("error");
     }
   }
