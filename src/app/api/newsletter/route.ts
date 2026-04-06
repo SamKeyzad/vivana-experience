@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
       // Already subscribed — treat as success
       return NextResponse.json({ ok: true });
     }
-    console.error("Newsletter insert error:", error.code, error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`Newsletter insert failed [${error.code}]: ${error.message}`);
+    return NextResponse.json({ error: error.code, detail: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
