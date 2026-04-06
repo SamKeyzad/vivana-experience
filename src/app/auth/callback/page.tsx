@@ -10,60 +10,85 @@ function CallbackInner() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const code = params.get("code");
     const sb = getSupabase();
     if (!sb) { router.replace("/"); return; }
 
-    if (!code) { router.replace("/"); return; }
+    // OAuth providers (Google, etc.) redirect here with ?error= when something goes wrong
+    // (e.g. the user denied access, or the redirect URL is not allowlisted in Supabase).
+    const errorParam = params.get("error");
+    if (errorParam) {
+      const desc = params.get("error_description") ?? errorParam;
+      setError(desc.replace(/_/g, " "));
+      return;
+    }
 
-    sb.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
-      if (error || !data.session) {
-        setError("Sign-in failed. Please try again.");
+    const code = params.get("code");
+    if (!code) {
+      // No code and no error — unusual, just go home.
+      router.replace("/");
+      return;
+    }
+
+    async function finish() {
+      const { data, error: exchError } = await sb!.auth.exchangeCodeForSession(code!);
+      if (exchError || !data.session) {
+        setError(exchError?.message ?? "Sign-in failed. Please try again.");
         return;
       }
 
       const user = data.session.user;
+      const next = params.get("next");
 
-      // Check if this user already has a profile (returning vs new user)
-      const { data: existingProfile } = await sb
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-      const isNewUser = !existingProfile;
+      try {
+        // Check whether this Google/OAuth user already has a profile row.
+        const { data: existingProfile } = await sb!
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+        const isNewUser = !existingProfile;
 
-      // Upsert profile so Google OAuth users always have a row
-      const meta = user.user_metadata ?? {};
-      const fullName: string = meta.full_name ?? meta.name ?? "";
-      const parts = fullName.trim().split(" ");
-      const firstName = meta.first_name ?? parts[0] ?? "";
-      const lastName  = meta.last_name  ?? parts.slice(1).join(" ") ?? "";
+        // Upsert so OAuth users always have a profile row.
+        const meta = user.user_metadata ?? {};
+        const fullName: string = (meta.full_name ?? meta.name ?? "") as string;
+        const parts = fullName.trim().split(" ");
+        const firstName = (meta.first_name ?? parts[0] ?? "") as string;
+        const lastName  = (meta.last_name  ?? parts.slice(1).join(" ") ?? "") as string;
 
-      await sb.from("profiles").upsert({
-        id:         user.id,
-        first_name: firstName,
-        last_name:  lastName,
-      }, { onConflict: "id", ignoreDuplicates: true }); // ignoreDuplicates = don't overwrite existing names
+        await sb!.from("profiles").upsert(
+          { id: user.id, first_name: firstName, last_name: lastName },
+          { onConflict: "id", ignoreDuplicates: true },
+        );
 
-      if (isNewUser) {
-        // New user — send to personal info to complete their profile
-        router.replace("/dashboard/account?onboarding=1");
-      } else {
-        // Returning user — go to intended destination or home with welcome toast
-        const next = params.get("next");
+        if (isNewUser) {
+          router.replace("/dashboard/account?onboarding=1");
+        } else {
+          router.replace(next ?? "/?welcome=back");
+        }
+      } catch {
+        // Profile operations are non-critical — still redirect the user home.
         router.replace(next ?? "/?welcome=back");
       }
-    });
-  }, [params, router]);
+    }
+
+    finish();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-stone-50 px-6 text-center">
-        <div>
-          <p className="text-sm font-medium text-red-600">{error}</p>
+        <div className="max-w-sm">
+          <div className="mb-4 text-4xl">⚠️</div>
+          <p className="text-sm font-semibold text-stone-800">Sign-in failed</p>
+          <p className="mt-1 text-xs text-stone-500 capitalize">{error}</p>
+          <p className="mt-3 text-xs text-stone-400">
+            Make sure your site URL is added to the allowed redirect URLs in your Supabase dashboard
+            under <span className="font-medium">Authentication → URL Configuration</span>.
+          </p>
           <button
             onClick={() => router.replace("/")}
-            className="mt-4 rounded-full bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-amber-700"
+            className="mt-5 rounded-full bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-amber-700"
           >
             Back to home
           </button>

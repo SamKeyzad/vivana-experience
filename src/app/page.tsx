@@ -151,32 +151,31 @@ export default function Home() {
     const sb = getSupabase();
     if (!sb) return;
 
-    // onAuthStateChange fires INITIAL_SESSION immediately on subscribe
-    // (covers page load / refresh), then SIGNED_IN / SIGNED_OUT on changes.
-    // This is the single source of truth — no separate getSession() needed.
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setUser(null); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async function applySession(session: any) {
       const meta = session.user.user_metadata ?? {};
-      // Set user immediately from JWT — no DB round-trip required
-      setUser({
-        firstName: (meta.first_name as string) ?? "",
-        lastName:  (meta.last_name  as string) ?? "",
-        email:     session.user.email ?? "",
-      });
-      // Silently try to enrich with profile names (best-effort, won't block UI)
-      sb.from("profiles")
+      // Try to enrich with DB profile; fall back to JWT metadata on any error.
+      const { data: p } = await sb!
+        .from("profiles")
         .select("first_name, last_name")
         .eq("id", session.user.id)
-        .maybeSingle()
-        .then(({ data: p }) => {
-          if (p?.first_name || p?.last_name) {
-            setUser({
-              firstName: p.first_name ?? "",
-              lastName:  p.last_name  ?? "",
-              email:     session.user.email ?? "",
-            });
-          }
-        });
+        .maybeSingle();
+      setUser({
+        firstName: p?.first_name || (meta.first_name as string) || "",
+        lastName:  p?.last_name  || (meta.last_name  as string) || "",
+        email:     session.user.email ?? "",
+      });
+    }
+
+    // Check session immediately so the UI is correct without waiting for the auth event.
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) applySession(session);
+    });
+
+    // Listen for sign-in / sign-out events while the page is open.
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setUser(null); return; }
+      applySession(session);
     });
 
     return () => subscription.unsubscribe();
@@ -1109,23 +1108,29 @@ function AuthModal({
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setLoading(true);
-    try {
-      const sb = getSupabase();
-      if (!sb) { setError("Service unavailable."); setLoading(false); return; }
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { setError(error.message); setLoading(false); return; }
-      const { data: profile } = await sb
-        .from("profiles").select("first_name, last_name").eq("id", data.user.id).single();
+    const sb = getSupabase();
+    if (!sb) { setError("Service unavailable."); setLoading(false); return; }
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
       setLoading(false);
-      onSuccess({
-        firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
-        lastName:  profile?.last_name  ?? data.user.user_metadata?.last_name  ?? "",
-        email:     data.user.email ?? "",
-      }, false); // false = returning user → "Welcome back"
-    } catch {
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setError("Please confirm your email before logging in. Check your inbox for the confirmation link.");
+      } else if (error.message.toLowerCase().includes("invalid login credentials")) {
+        setError("Incorrect email or password.");
+      } else {
+        setError(error.message);
+      }
+      return;
     }
+    // Use maybeSingle so a missing or unreadable profile row never blocks login
+    const { data: profile } = await sb
+      .from("profiles").select("first_name, last_name").eq("id", data.user.id).maybeSingle();
+    setLoading(false);
+    onSuccess({
+      firstName: profile?.first_name ?? (data.user.user_metadata?.first_name as string) ?? "",
+      lastName:  profile?.last_name  ?? (data.user.user_metadata?.last_name  as string) ?? "",
+      email:     data.user.email ?? "",
+    }, false);
   }
 
   function handleSignupStep1(e: React.FormEvent) {
