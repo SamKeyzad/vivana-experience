@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 
+type ViewMode = "guest" | "host";
+
 type DashUser = {
   id: string;
   firstName: string;
@@ -77,17 +79,20 @@ function NavLink({ item, pathname, onClick }: { item: NavItem; pathname: string;
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({ user, onSignOut, pathname, onClose }: {
+function Sidebar({ user, onSignOut, pathname, onClose, viewMode, setViewMode }: {
   user: DashUser | null;
   onSignOut: () => void;
   pathname: string;
   onClose?: () => void;
+  viewMode: ViewMode;
+  setViewMode: (m: ViewMode) => void;
 }) {
-  const mainNav = user?.role === "provider" ? PROVIDER_NAV : CLIENT_NAV;
+  const isProvider = user?.role === "provider";
+  const mainNav = viewMode === "host" ? PROVIDER_NAV : CLIENT_NAV;
 
   return (
     <div className="flex h-full flex-col">
-      {/* Logo */}
+      {/* Logo + user */}
       <div className="px-4 py-5 border-b border-stone-100">
         <Link href="/" className="text-xl font-bold tracking-wide text-amber-800" onClick={onClose}>
           VIVANA
@@ -95,21 +100,75 @@ function Sidebar({ user, onSignOut, pathname, onClose }: {
         {user && (
           <div className="mt-2 flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
-              {user.firstName.charAt(0).toUpperCase()}
+              {(user.firstName.charAt(0) || user.email.charAt(0)).toUpperCase()}
             </div>
             <div>
               <p className="text-xs font-semibold text-stone-800 leading-none">{user.firstName} {user.lastName}</p>
-              <p className="mt-0.5 text-[10px] text-stone-400 capitalize">{user.role === "provider" ? "Service Provider" : "Guest"}</p>
+              <p className="mt-0.5 text-[10px] text-stone-400">{viewMode === "host" ? "Hosting" : "Travelling"}</p>
             </div>
           </div>
         )}
       </div>
 
+      {/* Guest / Host mode switcher */}
+      <div className="px-3 pt-3 pb-1">
+        <div className="flex rounded-xl bg-stone-100 p-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode("guest");
+              localStorage.setItem("dashViewMode", "guest");
+            }}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition ${
+              viewMode === "guest"
+                ? "bg-white text-stone-800 shadow-sm"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            Guest
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode("host");
+              localStorage.setItem("dashViewMode", "host");
+            }}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition ${
+              viewMode === "host"
+                ? "bg-white text-stone-800 shadow-sm"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Host
+          </button>
+        </div>
+      </div>
+
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-        {mainNav.map(item => (
-          <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+        {viewMode === "host" && !isProvider ? (
+          <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-4 text-center">
+            <p className="text-xs font-semibold text-amber-800">Not hosting yet</p>
+            <p className="mt-1 text-[11px] text-amber-700/80 leading-relaxed">Share your skills or experiences with visitors in Lisbon.</p>
+            <Link
+              href="/dashboard/become-host"
+              onClick={onClose}
+              className="mt-3 inline-block rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+            >
+              Become a Host
+            </Link>
+          </div>
+        ) : (
+          mainNav.map(item => (
+            <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
+          ))
+        )}
 
         <div className="my-3 border-t border-stone-100" />
 
@@ -124,22 +183,6 @@ function Sidebar({ user, onSignOut, pathname, onClose }: {
           <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
         ))}
       </nav>
-
-      {/* Become a Host CTA — clients only */}
-      {user?.role !== "provider" && (
-        <div className="px-3 pb-2">
-          <Link
-            href="/dashboard/become-host"
-            onClick={onClose}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            Become a Host
-          </Link>
-        </div>
-      )}
 
       {/* Sign out */}
       <div className="border-t border-stone-100 px-3 py-3">
@@ -162,6 +205,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<DashUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("guest");
+
+  // Restore persisted view mode
+  useEffect(() => {
+    const saved = localStorage.getItem("dashViewMode");
+    if (saved === "host" || saved === "guest") setViewMode(saved);
+  }, []);
 
   useEffect(() => {
     const sb = getSupabase();
@@ -177,13 +227,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .eq("id", session.user.id)
         .single();
 
+      const role = profile?.role === "provider" ? "provider" : "client";
       setUser({
         id: session.user.id,
         firstName: profile?.first_name ?? "",
         lastName:  profile?.last_name  ?? "",
         email:     session.user.email  ?? "",
-        role:      profile?.role === "provider" ? "provider" : "client",
+        role,
       });
+      // Default providers to host view
+      if (role === "provider") {
+        const saved = localStorage.getItem("dashViewMode");
+        if (!saved) setViewMode("host");
+      }
       setLoading(false);
     });
   }, [router]);
@@ -206,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-stone-50">
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-stone-200 bg-white">
-        <Sidebar user={user} onSignOut={handleSignOut} pathname={pathname} />
+        <Sidebar user={user} onSignOut={handleSignOut} pathname={pathname} viewMode={viewMode} setViewMode={setViewMode} />
       </aside>
 
       {/* ── Mobile sidebar overlay ──────────────────────────────────────────── */}
@@ -222,7 +278,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {I.close}
               </button>
             </div>
-            <Sidebar user={user} onSignOut={handleSignOut} pathname={pathname} onClose={() => setSidebarOpen(false)} />
+            <Sidebar user={user} onSignOut={handleSignOut} pathname={pathname} onClose={() => setSidebarOpen(false)} viewMode={viewMode} setViewMode={setViewMode} />
           </aside>
         </div>
       )}

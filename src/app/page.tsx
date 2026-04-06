@@ -993,6 +993,7 @@ export default function Home() {
               <li><button type="button" onClick={() => { setTab("Experiences"); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="transition hover:text-white">Experiences</button></li>
               <li><button type="button" onClick={() => { setTab("Services"); document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }); }} className="transition hover:text-white">Services</button></li>
               <li><Link href="/access" className="transition hover:text-white">Access</Link></li>
+              <li><Link href="/careers" className="transition hover:text-white">Careers</Link></li>
             </ul>
           </div>
 
