@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
@@ -60,14 +61,20 @@ export default function ProfilePage() {
     const sb = getSupabase();
     if (!sb || !userId) return;
     setSaving(true);
-    await sb.from("profiles").update({
+    setSaveError("");
+    const { error } = await sb.from("profiles").update({
       bio:       profile.bio,
       location:  profile.location,
       languages: profile.languages,
     }).eq("id", userId);
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (error) {
+      console.error("Profile save error:", error.code, error.message);
+      setSaveError("Failed to save. Please try again.");
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   }
 
   function toggleLang(lang: string) {
@@ -166,6 +173,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {saveError && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{saveError}</p>}
         <button
           type="submit"
           disabled={saving}

@@ -21,6 +21,7 @@ export default function AccountPersonalPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [userId, setUserId]   = useState("");
 
   useEffect(() => {
@@ -53,7 +54,8 @@ export default function AccountPersonalPage() {
     const sb = getSupabase();
     if (!sb || !userId) return;
     setSaving(true);
-    await sb.from("profiles").update({
+    setSaveError("");
+    const { error } = await sb.from("profiles").update({
       first_name:    info.firstName,
       last_name:     info.lastName,
       phone:         info.phone,
@@ -63,8 +65,13 @@ export default function AccountPersonalPage() {
       address:       info.address,
     }).eq("id", userId);
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (error) {
+      console.error("Profile save error:", error.code, error.message);
+      setSaveError("Failed to save. Please try again.");
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   }
 
   const inputClass = "w-full rounded-xl border border-stone-200 px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20";
@@ -144,6 +151,7 @@ export default function AccountPersonalPage() {
           <textarea rows={3} value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder="Street, city, postcode, country" className={`${inputClass} resize-none`} />
         </div>
 
+        {saveError && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{saveError}</p>}
         <button type="submit" disabled={saving} className="w-full rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60">
           {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
         </button>
