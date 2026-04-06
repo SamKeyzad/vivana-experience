@@ -348,9 +348,12 @@ export default function Home() {
         <AuthModal
           mode={authMode}
           onClose={() => { setAuthMode(null); setPostAuthRedirect(null); }}
-          onSuccess={(u: AppUser) => {
+          onSuccess={(u: AppUser, isNew?: boolean) => {
             setUser(u);
             setAuthMode(null);
+            const name = u.firstName || u.email.split("@")[0];
+            setWelcomeToast(isNew ? `Welcome, ${name}!` : `Welcome back, ${name}!`);
+            setTimeout(() => setWelcomeToast(null), 4000);
             if (postAuthRedirect) {
               router.push(postAuthRedirect);
               setPostAuthRedirect(null);
@@ -1045,7 +1048,7 @@ function AuthModal({
 }: {
   mode: AuthMode;
   onClose: () => void;
-  onSuccess: (user: AppUser) => void;
+  onSuccess: (user: AppUser, isNew?: boolean) => void;
   onSwitch: (mode: AuthMode) => void;
   redirectTo?: string;
 }) {
@@ -1128,7 +1131,7 @@ function AuthModal({
         firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
         lastName:  profile?.last_name  ?? data.user.user_metadata?.last_name  ?? "",
         email:     data.user.email ?? "",
-      });
+      }, false); // false = returning user → "Welcome back"
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
