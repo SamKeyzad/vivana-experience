@@ -212,6 +212,11 @@ export default function BecomeHostPage() {
     if (listings.length > 1) setListings(prev => prev.filter((_, i) => i !== index));
   }
 
+  function toSlug(title: string) {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      + "-" + Math.random().toString(36).slice(2, 7);
+  }
+
   function updateHours(index: number, field: keyof DayHours, value: string | boolean) {
     setHours(prev => prev.map((h, i) => i === index ? { ...h, [field]: value } : h));
   }
@@ -241,7 +246,7 @@ export default function BecomeHostPage() {
     // Insert listings
     for (const listing of listings) {
       if (!listing.title && !listing.description) continue;
-      await sb.from("listings").insert({
+      const { error: listingError } = await sb.from("listings").insert({
         provider_id:  session.user.id,
         title:        listing.title,
         description:  listing.description,
@@ -253,7 +258,9 @@ export default function BecomeHostPage() {
         category,
         city,
         status:       "draft",
+        slug:         toSlug(listing.title || "listing"),
       });
+      if (listingError) console.error("Listing insert error:", listingError.message);
     }
 
     // Insert business hours

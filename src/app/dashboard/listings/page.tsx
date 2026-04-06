@@ -24,6 +24,8 @@ const STATUS_STYLES = {
 export default function ListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const sb = getSupabase();
@@ -52,6 +54,18 @@ export default function ListingsPage() {
     });
   }, []);
 
+  async function handleDelete(id: string) {
+    const sb = getSupabase();
+    if (!sb) return;
+    setDeletingId(id);
+    setConfirmId(null);
+    const { error } = await sb.from("listings").delete().eq("id", id);
+    if (!error) {
+      setListings(prev => prev.filter(l => l.id !== id));
+    }
+    setDeletingId(null);
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -59,9 +73,12 @@ export default function ListingsPage() {
           <h1 className="text-2xl font-bold text-stone-900">My Listings</h1>
           <p className="mt-1 text-sm text-stone-500">Manage your services and experiences.</p>
         </div>
-        <button className="shrink-0 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700">
+        <Link
+          href="/dashboard/become-host"
+          className="shrink-0 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
+        >
           + New listing
-        </button>
+        </Link>
       </div>
 
       {loading ? (
@@ -73,9 +90,12 @@ export default function ListingsPage() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-stone-100 text-2xl">🗂️</div>
           <p className="font-semibold text-stone-700">No listings yet</p>
           <p className="mt-1 text-sm text-stone-400">Create your first listing to start receiving bookings.</p>
-          <button className="mt-4 inline-block rounded-full bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-amber-700">
+          <Link
+            href="/dashboard/become-host"
+            className="mt-4 inline-block rounded-full bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-amber-700"
+          >
             Create a listing
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -100,6 +120,43 @@ export default function ListingsPage() {
                   {listing.status}
                 </span>
                 <p className="text-sm font-bold text-stone-700">€{listing.price}</p>
+              </div>
+
+              {/* Delete */}
+              <div className="shrink-0">
+                {confirmId === listing.id ? (
+                  <div className="flex flex-col items-end gap-1.5">
+                    <p className="text-[10px] text-stone-500">Remove listing?</p>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmId(null)}
+                        className="rounded-full border border-stone-200 px-3 py-1 text-xs font-semibold text-stone-500 hover:bg-stone-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(listing.id)}
+                        disabled={deletingId === listing.id}
+                        className="rounded-full bg-red-500 px-3 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+                      >
+                        {deletingId === listing.id ? "…" : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmId(listing.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-stone-200 text-stone-400 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                    aria-label="Remove listing"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           ))}
