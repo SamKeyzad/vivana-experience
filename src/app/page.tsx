@@ -107,7 +107,6 @@ export default function Home() {
   const [authMode, setAuthMode]     = useState<AuthMode>(null);
   const [postAuthRedirect, setPostAuthRedirect] = useState<string | null>(null);
   const [user, setUser]             = useState<AppUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [welcomeToast, setWelcomeToast] = useState<string | null>(null);
   const welcomeFlagRef = useRef<string | null>(null);
   const PAGE = 5;
@@ -150,27 +149,11 @@ export default function Home() {
   // Load session and listen for auth changes
   useEffect(() => {
     const sb = getSupabase();
-    if (!sb) { setAuthChecked(true); return; }
+    if (!sb) return;
 
     sb.auth.getSession().then(async ({ data }) => {
       const session = data?.session;
-      if (session) {
-        const { data: profile } = await sb
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", session.user.id)
-          .single();
-        setUser({
-          firstName: profile?.first_name ?? "",
-          lastName:  profile?.last_name  ?? "",
-          email:     session.user.email  ?? "",
-        });
-      }
-      setAuthChecked(true);
-    }).catch(() => setAuthChecked(true));
-
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) { setUser(null); setAuthChecked(true); return; }
+      if (!session) return;
       const { data: profile } = await sb
         .from("profiles")
         .select("first_name, last_name")
@@ -181,7 +164,20 @@ export default function Home() {
         lastName:  profile?.last_name  ?? "",
         email:     session.user.email  ?? "",
       });
-      setAuthChecked(true);
+    });
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) { setUser(null); return; }
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", session.user.id)
+        .single();
+      setUser({
+        firstName: profile?.first_name ?? "",
+        lastName:  profile?.last_name  ?? "",
+        email:     session.user.email  ?? "",
+      });
     });
 
     return () => subscription.unsubscribe();
@@ -318,11 +314,7 @@ export default function Home() {
               </button>
             </nav>
             <div className="border-t border-black/8 p-2 space-y-1">
-              {!authChecked ? (
-                <div className="px-4 py-3">
-                  <div className="h-4 w-28 animate-pulse rounded-full bg-stone-100" />
-                </div>
-              ) : user ? (
+              {user ? (
                 <>
                   <div className="px-4 py-2">
                     <p className="text-xs text-stone-400">Signed in as</p>
