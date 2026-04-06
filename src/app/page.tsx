@@ -107,6 +107,9 @@ export default function Home() {
   const [authMode, setAuthMode]     = useState<AuthMode>(null);
   const [postAuthRedirect, setPostAuthRedirect] = useState<string | null>(null);
   const [user, setUser]             = useState<AppUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [welcomeToast, setWelcomeToast] = useState<string | null>(null);
+  const welcomeFlagRef = useRef<string | null>(null);
   const PAGE = 5;
   type SliderState = { offset: number; dir: 1 | -1; tick: number };
   const [sliders, setSliders] = useState<Record<string, SliderState>>({});
@@ -151,17 +154,19 @@ export default function Home() {
 
     sb.auth.getSession().then(async ({ data }) => {
       const session = data?.session;
-      if (!session) return;
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", session.user.id)
-        .single();
-      setUser({
-        firstName: profile?.first_name ?? "",
-        lastName:  profile?.last_name  ?? "",
-        email:     session.user.email  ?? "",
-      });
+      if (session) {
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", session.user.id)
+          .single();
+        setUser({
+          firstName: profile?.first_name ?? "",
+          lastName:  profile?.last_name  ?? "",
+          email:     session.user.email  ?? "",
+        });
+      }
+      setAuthChecked(true);
     });
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
@@ -180,6 +185,28 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Detect welcome=back param from OAuth redirect and store in ref
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const welcome = params.get("welcome");
+    if (welcome) {
+      welcomeFlagRef.current = welcome;
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Show toast once user state is populated and a welcome flag exists
+  useEffect(() => {
+    if (user && welcomeFlagRef.current) {
+      const flag = welcomeFlagRef.current;
+      welcomeFlagRef.current = null;
+      const name = user.firstName || user.email.split("@")[0];
+      setWelcomeToast(flag === "back" ? `Welcome back, ${name}!` : `Welcome, ${name}!`);
+      const t = setTimeout(() => setWelcomeToast(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [user]);
 
   // Reset panel when tab switches
   useEffect(() => { setPanel(null); }, [tab]);
@@ -243,6 +270,14 @@ export default function Home() {
   return (
     <div>
 
+      {/* ── Welcome toast ───────────────────────────────────────────────────── */}
+      {welcomeToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 rounded-full bg-white px-5 py-3 shadow-xl border border-black/8 text-sm font-semibold text-stone-800 animate-fade-in">
+          <span className="text-lg">👋</span>
+          {welcomeToast}
+        </div>
+      )}
+
       {/* ── Burger menu (fixed) ─────────────────────────────────────────────── */}
       <div
         ref={menuRef}
@@ -282,7 +317,11 @@ export default function Home() {
               </button>
             </nav>
             <div className="border-t border-black/8 p-2 space-y-1">
-              {user ? (
+              {!authChecked ? (
+                <div className="px-4 py-3">
+                  <div className="h-4 w-28 animate-pulse rounded-full bg-stone-100" />
+                </div>
+              ) : user ? (
                 <>
                   <div className="px-4 py-2">
                     <p className="text-xs text-stone-400">Signed in as</p>

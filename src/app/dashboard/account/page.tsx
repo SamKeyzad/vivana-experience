@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { getSupabase } from "@/lib/supabase";
 
 type PersonalInfo = {
@@ -13,7 +15,9 @@ type PersonalInfo = {
   address: string;
 };
 
-export default function AccountPersonalPage() {
+function AccountPersonalPageInner() {
+  const searchParams = useSearchParams();
+  const isOnboarding = searchParams.get("onboarding") === "1";
   const [info, setInfo] = useState<PersonalInfo>({
     firstName: "", lastName: "", email: "", phone: "",
     dateOfBirth: "", nationality: "", gender: "", address: "",
@@ -85,6 +89,12 @@ export default function AccountPersonalPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {isOnboarding && (
+        <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+          <p className="text-sm font-semibold text-amber-800">Welcome to Vivana! 👋</p>
+          <p className="mt-0.5 text-sm text-amber-700">Please fill in your personal details to complete your profile.</p>
+        </div>
+      )}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-900">Personal Information</h1>
         <p className="mt-1 text-sm text-stone-500">Update your personal details. This information is kept private.</p>
@@ -157,5 +167,13 @@ export default function AccountPersonalPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function AccountPersonalPage() {
+  return (
+    <Suspense>
+      <AccountPersonalPageInner />
+    </Suspense>
   );
 }

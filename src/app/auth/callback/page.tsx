@@ -24,6 +24,14 @@ function CallbackInner() {
 
       const user = data.session.user;
 
+      // Check if this user already has a profile (returning vs new user)
+      const { data: existingProfile } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      const isNewUser = !existingProfile;
+
       // Upsert profile so Google OAuth users always have a row
       const meta = user.user_metadata ?? {};
       const fullName: string = meta.full_name ?? meta.name ?? "";
@@ -37,7 +45,14 @@ function CallbackInner() {
         last_name:  lastName,
       }, { onConflict: "id", ignoreDuplicates: true }); // ignoreDuplicates = don't overwrite existing names
 
-      router.replace(params.get("next") ?? "/");
+      if (isNewUser) {
+        // New user — send to personal info to complete their profile
+        router.replace("/dashboard/account?onboarding=1");
+      } else {
+        // Returning user — go to intended destination or home with welcome toast
+        const next = params.get("next");
+        router.replace(next ?? "/?welcome=back");
+      }
     });
   }, [params, router]);
 
