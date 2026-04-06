@@ -157,7 +157,7 @@ export default function AccessIndexPage() {
       {/* ── Newsletter ──────────────────────────────────────────────────────── */}
       <section className="relative px-6 py-16 text-center text-white overflow-hidden">
         <Image
-          src="/azulejo.jpg"
+          src="/azulejo_2.jpg"
           alt="Azulejo tiles"
           fill
           className="object-cover"

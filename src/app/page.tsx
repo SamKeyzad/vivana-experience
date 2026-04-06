@@ -894,7 +894,7 @@ export default function Home() {
 
       {/* ── Newsletter ──────────────────────────────────────────────────────── */}
       <section className="relative px-6 py-16 text-center text-white overflow-hidden">
-        <Image src="/azulejo.jpg" alt="Azulejo tiles" fill className="object-cover" sizes="100vw" />
+        <Image src="/azulejo_2.jpg" alt="Azulejo tiles" fill className="object-cover" sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-br from-stone-900/90 via-amber-900/80 to-stone-900/90" />
         <div className="relative z-10 max-w-lg mx-auto">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-300 mb-3">Stay in the loop</p>
