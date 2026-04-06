@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { getSupabase } from "@/lib/supabase";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -11,23 +10,20 @@ export default function NewsletterForm() {
     if (!email.trim()) return;
     setStatus("loading");
     try {
-      const sb = getSupabase();
-      if (!sb) { setStatus("error"); return; }
-      const { error } = await sb.from("newsletter_subscribers").insert({ email: email.trim() });
-      if (error) {
-        if (error.code === "23505") {
-          // Already subscribed — treat as success
-          setStatus("success"); setEmail("");
-        } else {
-          console.error("Newsletter insert error:", error.code, error.message);
-          setStatus("error");
-        }
-      } else {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
         setStatus("success");
         setEmail("");
+      } else {
+        console.error("Newsletter error:", await res.text());
+        setStatus("error");
       }
     } catch (err) {
-      console.error("Newsletter submit exception:", err);
+      console.error("Newsletter exception:", err);
       setStatus("error");
     }
   }
