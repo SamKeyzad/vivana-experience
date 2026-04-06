@@ -151,42 +151,32 @@ export default function Home() {
     const sb = getSupabase();
     if (!sb) return;
 
-    function userFromSession(session: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) {
-      const meta = session.user.user_metadata ?? {};
-      return {
-        firstName: meta.first_name ?? "",
-        lastName:  meta.last_name  ?? "",
-        email:     session.user.email ?? "",
-      };
-    }
-
-    async function enrichWithProfile(session: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) {
-      // Set immediately from token metadata so the UI updates right away
-      setUser(userFromSession(session));
-      // Then try to get better names from the profiles table
-      try {
-        const { data: profile } = await sb!
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", session.user.id)
-          .single();
-        if (profile?.first_name || profile?.last_name) {
-          setUser({
-            firstName: profile.first_name ?? "",
-            lastName:  profile.last_name  ?? "",
-            email:     session.user.email ?? "",
-          });
-        }
-      } catch { /* profiles table may not exist yet — token metadata is enough */ }
-    }
-
-    sb.auth.getSession().then(({ data }) => {
-      if (data?.session) enrichWithProfile(data.session);
-    });
-
+    // onAuthStateChange fires INITIAL_SESSION immediately on subscribe
+    // (covers page load / refresh), then SIGNED_IN / SIGNED_OUT on changes.
+    // This is the single source of truth — no separate getSession() needed.
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       if (!session) { setUser(null); return; }
-      enrichWithProfile(session);
+      const meta = session.user.user_metadata ?? {};
+      // Set user immediately from JWT — no DB round-trip required
+      setUser({
+        firstName: (meta.first_name as string) ?? "",
+        lastName:  (meta.last_name  as string) ?? "",
+        email:     session.user.email ?? "",
+      });
+      // Silently try to enrich with profile names (best-effort, won't block UI)
+      sb.from("profiles")
+        .select("first_name, last_name")
+        .eq("id", session.user.id)
+        .maybeSingle()
+        .then(({ data: p }) => {
+          if (p?.first_name || p?.last_name) {
+            setUser({
+              firstName: p.first_name ?? "",
+              lastName:  p.last_name  ?? "",
+              email:     session.user.email ?? "",
+            });
+          }
+        });
     });
 
     return () => subscription.unsubscribe();
@@ -330,7 +320,7 @@ export default function Home() {
                     <p className="text-sm font-semibold text-stone-800 truncate">{user.firstName} {user.lastName}</p>
                   </div>
                   <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50">My Dashboard</Link>
-                  <button type="button" onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50">Log out</button>
+                  <button type="button" onClick={async () => { await supabase.auth.signOut(); setUser(null); setMenuOpen(false); }} className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50">Log out</button>
                 </>
               ) : (
                 <>

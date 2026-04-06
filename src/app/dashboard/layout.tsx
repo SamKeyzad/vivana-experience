@@ -217,44 +217,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const sb = getSupabase();
     if (!sb) { setLoading(false); return; }
 
-    sb.auth.getSession().then(async ({ data }) => {
-      const session = data?.session;
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       if (!session) { router.replace("/"); return; }
 
       const meta = session.user.user_metadata ?? {};
+      const uid  = session.user.id;
 
-      // Set from token metadata immediately so dashboard isn't blocked
+      // Set from JWT immediately — no DB needed
       setUser({
-        id:        session.user.id,
-        firstName: meta.first_name ?? "",
-        lastName:  meta.last_name  ?? "",
+        id:        uid,
+        firstName: (meta.first_name as string) ?? "",
+        lastName:  (meta.last_name  as string) ?? "",
         email:     session.user.email ?? "",
         role:      "client",
       });
       setLoading(false);
 
-      // Then enrich with profile data
-      try {
-        const { data: profile } = await sb
-          .from("profiles")
-          .select("first_name, last_name, role")
-          .eq("id", session.user.id)
-          .single();
-
-        const role = profile?.role === "provider" ? "provider" : "client";
-        setUser({
-          id:        session.user.id,
-          firstName: profile?.first_name ?? meta.first_name ?? "",
-          lastName:  profile?.last_name  ?? meta.last_name  ?? "",
-          email:     session.user.email  ?? "",
-          role,
+      // Best-effort profile enrichment
+      sb.from("profiles")
+        .select("first_name, last_name, role")
+        .eq("id", uid)
+        .maybeSingle()
+        .then(({ data: p }) => {
+          const role = p?.role === "provider" ? "provider" : "client";
+          setUser({
+            id:        uid,
+            firstName: p?.first_name ?? (meta.first_name as string) ?? "",
+            lastName:  p?.last_name  ?? (meta.last_name  as string) ?? "",
+            email:     session.user.email ?? "",
+            role,
+          });
+          if (role === "provider" && !localStorage.getItem("dashViewMode")) {
+            setViewMode("host");
+          }
         });
-        if (role === "provider") {
-          const saved = localStorage.getItem("dashViewMode");
-          if (!saved) setViewMode("host");
-        }
-      } catch { /* profiles table may not exist yet */ }
     });
+
+    return () => subscription.unsubscribe();
   }, [router]);
 
   async function handleSignOut() {
