@@ -151,33 +151,42 @@ export default function Home() {
     const sb = getSupabase();
     if (!sb) return;
 
-    sb.auth.getSession().then(async ({ data }) => {
-      const session = data?.session;
-      if (!session) return;
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", session.user.id)
-        .single();
-      setUser({
-        firstName: profile?.first_name ?? "",
-        lastName:  profile?.last_name  ?? "",
-        email:     session.user.email  ?? "",
-      });
+    function userFromSession(session: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) {
+      const meta = session.user.user_metadata ?? {};
+      return {
+        firstName: meta.first_name ?? "",
+        lastName:  meta.last_name  ?? "",
+        email:     session.user.email ?? "",
+      };
+    }
+
+    async function enrichWithProfile(session: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) {
+      // Set immediately from token metadata so the UI updates right away
+      setUser(userFromSession(session));
+      // Then try to get better names from the profiles table
+      try {
+        const { data: profile } = await sb!
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", session.user.id)
+          .single();
+        if (profile?.first_name || profile?.last_name) {
+          setUser({
+            firstName: profile.first_name ?? "",
+            lastName:  profile.last_name  ?? "",
+            email:     session.user.email ?? "",
+          });
+        }
+      } catch { /* profiles table may not exist yet — token metadata is enough */ }
+    }
+
+    sb.auth.getSession().then(({ data }) => {
+      if (data?.session) enrichWithProfile(data.session);
     });
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       if (!session) { setUser(null); return; }
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", session.user.id)
-        .single();
-      setUser({
-        firstName: profile?.first_name ?? "",
-        lastName:  profile?.last_name  ?? "",
-        email:     session.user.email  ?? "",
-      });
+      enrichWithProfile(session);
     });
 
     return () => subscription.unsubscribe();

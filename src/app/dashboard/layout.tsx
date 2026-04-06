@@ -221,26 +221,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const session = data?.session;
       if (!session) { router.replace("/"); return; }
 
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("first_name, last_name, role")
-        .eq("id", session.user.id)
-        .single();
+      const meta = session.user.user_metadata ?? {};
 
-      const role = profile?.role === "provider" ? "provider" : "client";
+      // Set from token metadata immediately so dashboard isn't blocked
       setUser({
-        id: session.user.id,
-        firstName: profile?.first_name ?? "",
-        lastName:  profile?.last_name  ?? "",
-        email:     session.user.email  ?? "",
-        role,
+        id:        session.user.id,
+        firstName: meta.first_name ?? "",
+        lastName:  meta.last_name  ?? "",
+        email:     session.user.email ?? "",
+        role:      "client",
       });
-      // Default providers to host view
-      if (role === "provider") {
-        const saved = localStorage.getItem("dashViewMode");
-        if (!saved) setViewMode("host");
-      }
       setLoading(false);
+
+      // Then enrich with profile data
+      try {
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("first_name, last_name, role")
+          .eq("id", session.user.id)
+          .single();
+
+        const role = profile?.role === "provider" ? "provider" : "client";
+        setUser({
+          id:        session.user.id,
+          firstName: profile?.first_name ?? meta.first_name ?? "",
+          lastName:  profile?.last_name  ?? meta.last_name  ?? "",
+          email:     session.user.email  ?? "",
+          role,
+        });
+        if (role === "provider") {
+          const saved = localStorage.getItem("dashViewMode");
+          if (!saved) setViewMode("host");
+        }
+      } catch { /* profiles table may not exist yet */ }
     });
   }, [router]);
 
