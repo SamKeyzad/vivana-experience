@@ -150,7 +150,7 @@ export default function Home() {
   // Load session and listen for auth changes
   useEffect(() => {
     const sb = getSupabase();
-    if (!sb) return;
+    if (!sb) { setAuthChecked(true); return; }
 
     sb.auth.getSession().then(async ({ data }) => {
       const session = data?.session;
@@ -167,10 +167,10 @@ export default function Home() {
         });
       }
       setAuthChecked(true);
-    });
+    }).catch(() => setAuthChecked(true));
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) { setUser(null); return; }
+      if (!session) { setUser(null); setAuthChecked(true); return; }
       const { data: profile } = await sb
         .from("profiles")
         .select("first_name, last_name")
@@ -181,6 +181,7 @@ export default function Home() {
         lastName:  profile?.last_name  ?? "",
         email:     session.user.email  ?? "",
       });
+      setAuthChecked(true);
     });
 
     return () => subscription.unsubscribe();
