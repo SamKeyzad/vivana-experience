@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-      console.error("Newsletter: missing Supabase env vars");
+      console.error("Newsletter: missing env vars — url:", !!url, "key:", !!key, "service_role:", !!process.env.SUPABASE_SERVICE_ROLE_KEY, "anon:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
       return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
     }
 
