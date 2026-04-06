@@ -1025,14 +1025,21 @@ function AuthModal({
 
   async function handleOAuth(provider: "google" | "apple") {
     const sb = getSupabase();
-    if (!sb) return;
+    if (!sb) { setError("Service unavailable. Please try again."); return; }
     setOauthLoading(true);
-    const callbackUrl = `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ""}`;
-    const { error } = await sb.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: callbackUrl },
-    });
-    if (error) { setError(error.message); setOauthLoading(false); }
+    setError("");
+    try {
+      const callbackUrl = `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ""}`;
+      const { error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: callbackUrl },
+      });
+      if (error) { setError(error.message); setOauthLoading(false); }
+      // On success the page navigates away — no cleanup needed
+    } catch {
+      setError("Could not connect. Please try again.");
+      setOauthLoading(false);
+    }
   }
 
   // ── Social buttons shared UI ──────────────────────────────────────────────
@@ -1064,12 +1071,23 @@ function AuthModal({
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) { setError(error.message); return; }
-    const { data: profile } = await supabase
-      .from("profiles").select("first_name, last_name").eq("id", data.user.id).single();
-    onSuccess({ firstName: profile?.first_name ?? "", lastName: profile?.last_name ?? "", email: data.user.email ?? "" });
+    try {
+      const sb = getSupabase();
+      if (!sb) { setError("Service unavailable."); setLoading(false); return; }
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { setError(error.message); setLoading(false); return; }
+      const { data: profile } = await sb
+        .from("profiles").select("first_name, last_name").eq("id", data.user.id).single();
+      setLoading(false);
+      onSuccess({
+        firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
+        lastName:  profile?.last_name  ?? data.user.user_metadata?.last_name  ?? "",
+        email:     data.user.email ?? "",
+      });
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   }
 
   function handleSignupStep1(e: React.FormEvent) {
@@ -1086,15 +1104,32 @@ function AuthModal({
     if (password.length < 6) { setError("Password must be at least 6 characters."); setLoading(false); return; }
     if (password !== confirmPassword) { setError("Passwords do not match."); setLoading(false); return; }
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { first_name: firstName, last_name: lastName, role } },
-    });
-    if (signUpError) { setError(signUpError.message); setLoading(false); return; }
+    try {
+      const sb = getSupabase();
+      if (!sb) { setError("Service unavailable."); setLoading(false); return; }
+      const { data, error: signUpError } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: { first_name: firstName, last_name: lastName, role } },
+      });
+      if (signUpError) { setError(signUpError.message); setLoading(false); return; }
 
-    setLoading(false);
-    setStep(4);
+      // Create profile row immediately (session may be null until email confirmed, but user.id is available)
+      if (data.user) {
+        await sb.from("profiles").upsert({
+          id:         data.user.id,
+          first_name: firstName,
+          last_name:  lastName,
+          role,
+        }, { onConflict: "id" });
+      }
+
+      setLoading(false);
+      setStep(4);
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   }
 
   const inputClass = "w-full rounded-xl border border-black/15 px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";

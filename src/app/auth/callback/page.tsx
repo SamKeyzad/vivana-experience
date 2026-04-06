@@ -12,22 +12,33 @@ function CallbackInner() {
   useEffect(() => {
     const code = params.get("code");
     const sb = getSupabase();
-
     if (!sb) { router.replace("/"); return; }
 
-    if (code) {
-      sb.auth.exchangeCodeForSession(code)
-        .then(({ error }) => {
-          if (error) {
-            setError("Sign-in failed. Please try again.");
-          } else {
-            router.replace(params.get("next") ?? "/");
-          }
-        });
-    } else {
-      // No code param — might be implicit flow or already handled
-      router.replace("/");
-    }
+    if (!code) { router.replace("/"); return; }
+
+    sb.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
+      if (error || !data.session) {
+        setError("Sign-in failed. Please try again.");
+        return;
+      }
+
+      const user = data.session.user;
+
+      // Upsert profile so Google OAuth users always have a row
+      const meta = user.user_metadata ?? {};
+      const fullName: string = meta.full_name ?? meta.name ?? "";
+      const parts = fullName.trim().split(" ");
+      const firstName = meta.first_name ?? parts[0] ?? "";
+      const lastName  = meta.last_name  ?? parts.slice(1).join(" ") ?? "";
+
+      await sb.from("profiles").upsert({
+        id:         user.id,
+        first_name: firstName,
+        last_name:  lastName,
+      }, { onConflict: "id", ignoreDuplicates: true }); // ignoreDuplicates = don't overwrite existing names
+
+      router.replace(params.get("next") ?? "/");
+    });
   }, [params, router]);
 
   if (error) {
