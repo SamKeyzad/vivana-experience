@@ -257,7 +257,7 @@ export default function BecomeHostPage() {
         duration:     parseFloat(listing.duration) || 1,
         category,
         city,
-        status:       "draft",
+        status:       "active",
         slug:         toSlug(listing.title || "listing"),
       });
       if (listingError) console.error("Listing insert error:", listingError.message);

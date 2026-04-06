@@ -44,6 +44,23 @@ type Panel    = "when" | null;
 type DateRange = { start: Date | null; end: Date | null };
 type AuthMode = "login" | "signup" | null;
 type AppUser  = { firstName: string; lastName: string; email: string };
+type DBListing = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  price_type: string | null;
+  category: string | null;
+  image: string | null;
+  booking_count: number;
+};
+
+// Category ids that come from the "services" host type in become-host wizard
+const SERVICE_LISTING_IDS = new Set([
+  "catering","chef","tea_session","hair","makeup","massage","nails",
+  "personal_training","running_buddy","photography","prepared_meals",
+  "spa","driver","waiter","general_assistance",
+]);
 
 const CATEGORIES = [
   { label: "Tours",            emoji: "🗺️" },
@@ -108,6 +125,7 @@ export default function Home() {
   const [postAuthRedirect, setPostAuthRedirect] = useState<string | null>(null);
   const [user, setUser]             = useState<AppUser | null>(null);
   const [welcomeToast, setWelcomeToast] = useState<string | null>(null);
+  const [dbListings, setDbListings] = useState<DBListing[]>([]);
   const welcomeFlagRef = useRef<string | null>(null);
   const PAGE = 5;
   type SliderState = { offset: number; dir: 1 | -1; tick: number };
@@ -179,6 +197,16 @@ export default function Home() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch active host listings from Supabase
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb) return;
+    sb.from("listings")
+      .select("id, title, description, price, price_type, category, image, booking_count")
+      .eq("status", "active")
+      .then(({ data }) => { if (data) setDbListings(data as DBListing[]); });
   }, []);
 
   // Detect welcome=back param from OAuth redirect and store in ref
@@ -690,6 +718,35 @@ export default function Home() {
                 </div>
               );
             })()}
+
+            {/* ── Host experience listings from Supabase ───────────────────── */}
+            {dbListings.filter(l => !SERVICE_LISTING_IDS.has(l.category ?? "")).length > 0 && (
+              <div>
+                <div className="mb-1">
+                  <h2 className="text-xl font-bold text-amber-900">From Local Hosts</h2>
+                  <p className="mt-1 text-sm text-stone-500">Experiences created by Lisbon&apos;s local community.</p>
+                </div>
+                <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {dbListings.filter(l => !SERVICE_LISTING_IDS.has(l.category ?? "")).map(listing => (
+                    <Link key={listing.id} href={`/listing/${listing.id}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                      <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                        {listing.image
+                          ? <Image src={listing.image} alt={listing.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, 20vw" />
+                          : <div className="absolute inset-0 flex items-center justify-center text-4xl bg-gradient-to-br from-amber-50 to-amber-100">🌟</div>
+                        }
+                      </div>
+                      <div className="p-3">
+                        <h3 className="text-xs font-semibold text-stone-800 leading-snug">{listing.title}</h3>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span className="text-[10px] text-stone-400">{listing.booking_count} booked</span>
+                          <span className="text-xs font-bold text-amber-700">€{listing.price}<span className="font-normal text-stone-400">/{listing.price_type === "per_group" ? "group" : "guest"}</span></span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -767,6 +824,35 @@ export default function Home() {
                 </div>
               );
             })()}
+
+            {/* ── Host service listings from Supabase ──────────────────────── */}
+            {dbListings.filter(l => SERVICE_LISTING_IDS.has(l.category ?? "")).length > 0 && (
+              <div className="mt-14">
+                <div className="mb-1">
+                  <h2 className="text-xl font-bold text-amber-900">From Local Hosts</h2>
+                  <p className="mt-1 text-sm text-stone-500">Services offered by Lisbon&apos;s local community.</p>
+                </div>
+                <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {dbListings.filter(l => SERVICE_LISTING_IDS.has(l.category ?? "")).map(listing => (
+                    <Link key={listing.id} href={`/listing/${listing.id}`} className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white text-left transition hover:shadow-lg hover:-translate-y-0.5">
+                      <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+                        {listing.image
+                          ? <Image src={listing.image} alt={listing.title} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 50vw, 20vw" />
+                          : <div className="absolute inset-0 flex items-center justify-center text-4xl bg-gradient-to-br from-amber-50 to-amber-100">✨</div>
+                        }
+                      </div>
+                      <div className="p-3">
+                        <h3 className="text-xs font-semibold text-stone-800 leading-snug">{listing.title}</h3>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span className="text-[10px] text-stone-400">{listing.booking_count} booked</span>
+                          <span className="text-xs font-bold text-amber-700">€{listing.price}<span className="font-normal text-stone-400">/{listing.price_type === "per_group" ? "group" : "guest"}</span></span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
