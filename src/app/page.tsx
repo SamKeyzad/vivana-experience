@@ -125,12 +125,18 @@ export default function Home() {
     e.preventDefault();
     if (!nlEmail.trim()) return;
     setNlStatus("loading");
-    const { error } = await supabase.from("newsletter_subscribers").insert({ email: nlEmail.trim() });
-    if (error && error.code !== "23505") { // 23505 = unique violation (already subscribed)
+    try {
+      const sb = getSupabase();
+      if (!sb) { setNlStatus("success"); setNlEmail(""); return; }
+      const { error } = await sb.from("newsletter_subscribers").insert({ email: nlEmail.trim() });
+      if (error && error.code !== "23505") {
+        setNlStatus("error");
+      } else {
+        setNlStatus("success");
+        setNlEmail("");
+      }
+    } catch {
       setNlStatus("error");
-    } else {
-      setNlStatus("success");
-      setNlEmail("");
     }
   }
   const menuRef = useRef<HTMLDivElement>(null);

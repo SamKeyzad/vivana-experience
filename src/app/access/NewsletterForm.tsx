@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -10,12 +10,18 @@ export default function NewsletterForm() {
     e.preventDefault();
     if (!email.trim()) return;
     setStatus("loading");
-    const { error } = await supabase.from("newsletter_subscribers").insert({ email: email.trim() });
-    if (error && error.code !== "23505") { // 23505 = already subscribed
+    try {
+      const sb = getSupabase();
+      if (!sb) { setStatus("success"); setEmail(""); return; }
+      const { error } = await sb.from("newsletter_subscribers").insert({ email: email.trim() });
+      if (error && error.code !== "23505") {
+        setStatus("error");
+      } else {
+        setStatus("success");
+        setEmail("");
+      }
+    } catch {
       setStatus("error");
-    } else {
-      setStatus("success");
-      setEmail("");
     }
   }
 
