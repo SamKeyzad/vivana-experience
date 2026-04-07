@@ -1346,7 +1346,16 @@ function AuthModal({
                 </button>
               </div>
             </div>
-            {error && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{error}</p>}
+            {error && (
+              <div className="rounded-xl bg-red-50 px-4 py-2.5">
+                <p className="text-xs font-medium text-red-600">{error}</p>
+                {error === "Incorrect email or password." && (
+                  <button type="button" onClick={() => onSwitch("forgot")} className="mt-1 text-xs text-amber-600 hover:underline">
+                    Forgot your password?
+                  </button>
+                )}
+              </div>
+            )}
             <button type="submit" disabled={loading} className={btnPrimary}>{loading ? "Logging in…" : "Log in"}</button>
             <p className="text-center text-xs text-stone-400">
               Don&apos;t have an account?{" "}

@@ -15,6 +15,7 @@ const SERVICE_CATEGORIES = [
   { id: "personal_training",   label: "Personal Training",    emoji: "🏋️" },
   { id: "running_buddy",       label: "Running Buddy",        emoji: "🏃" },
   { id: "photography",         label: "Photography",          emoji: "📸" },
+  { id: "yoga",                label: "Yoga",                 emoji: "🧘" },
   { id: "prepared_meals",      label: "Prepared Meals",       emoji: "🥗" },
   { id: "spa",                 label: "Spa",                  emoji: "🧖" },
   { id: "driver",              label: "Driver",               emoji: "🚗" },
@@ -32,7 +33,9 @@ const EXPERIENCE_CATEGORIES = [
   { id: "cultural",       label: "Cultural",        emoji: "🏛️" },
   { id: "music",          label: "Music & Arts",    emoji: "🎭" },
   { id: "sports",         label: "Sports",          emoji: "⚽" },
-  { id: "wellness",       label: "Wellness",        emoji: "🧘" },
+  { id: "wellness",           label: "Wellness",          emoji: "🧘" },
+  { id: "workshop",           label: "Workshop",          emoji: "🛠️" },
+  { id: "olive_oil_tasting",  label: "Olive Oil Tasting", emoji: "🫒" },
 ];
 
 const CITIES = [
