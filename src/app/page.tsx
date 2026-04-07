@@ -1262,7 +1262,6 @@ function AuthModal({
       });
       if (signUpError) { setError(signUpError.message); setLoading(false); return; }
 
-      // Create profile row immediately (session may be null until email confirmed, but user.id is available)
       if (data.user) {
         await sb.from("profiles").upsert({
           id:         data.user.id,
@@ -1273,7 +1272,14 @@ function AuthModal({
       }
 
       setLoading(false);
-      setStep(4);
+
+      if (data.session) {
+        // Email confirmation is disabled — session returned immediately, log user in now.
+        onSuccess({ firstName, lastName, email: data.user?.email ?? "" }, true);
+      } else {
+        // Confirmation email sent — show "check your inbox" screen.
+        setStep(4);
+      }
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);

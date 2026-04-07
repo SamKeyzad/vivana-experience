@@ -217,8 +217,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const sb = getSupabase();
     if (!sb) { setLoading(false); return; }
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session) { router.replace("/"); return; }
+    // Seed user immediately from storage so a delayed INITIAL_SESSION never
+    // causes a false "no session" redirect.
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setLoading(false); router.replace("/"); }
+    });
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      // Only redirect on an explicit sign-out, never on the initial null state.
+      if (!session) { if (event === "SIGNED_OUT") router.replace("/"); return; }
 
       const meta = session.user.user_metadata ?? {};
       const uid  = session.user.id;
