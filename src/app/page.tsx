@@ -164,36 +164,26 @@ export default function Home() {
   }
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Load session and listen for auth changes
+  // Auth: read session immediately + keep in sync with sign-in/out events
   useEffect(() => {
     const sb = getSupabase();
     if (!sb) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async function applySession(session: any) {
-      const meta = session.user.user_metadata ?? {};
-      // Try to enrich with DB profile; fall back to JWT metadata on any error.
-      const { data: p } = await sb!
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", session.user.id)
-        .maybeSingle();
-      setUser({
-        firstName: p?.first_name || (meta.first_name as string) || "",
-        lastName:  p?.last_name  || (meta.last_name  as string) || "",
-        email:     session.user.email ?? "",
-      });
+    function sessionToUser(s: any): AppUser | null {
+      if (!s) return null;
+      const m = s.user.user_metadata ?? {};
+      return {
+        firstName: (m.first_name as string) ?? "",
+        lastName:  (m.last_name  as string) ?? "",
+        email:     s.user.email ?? "",
+      };
     }
 
-    // Check session immediately so the UI is correct without waiting for the auth event.
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (session) applySession(session);
-    });
+    sb.auth.getSession().then(({ data: { session } }) => setUser(sessionToUser(session)));
 
-    // Listen for sign-in / sign-out events while the page is open.
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setUser(null); return; }
-      applySession(session);
+      setUser(sessionToUser(session));
     });
 
     return () => subscription.unsubscribe();
@@ -1146,17 +1136,20 @@ function AuthModal({
   onSwitch: (mode: AuthMode) => void;
   redirectTo?: string;
 }) {
-  const [step, setStep]                   = useState(1);
-  const [email, setEmail]                 = useState("");
-  const [role, setRole]                   = useState<"client" | "provider">("client");
-  const [password, setPassword]           = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName]         = useState("");
-  const [lastName, setLastName]           = useState("");
-  const [error, setError]                 = useState("");
-  const [showPassword, setShowPassword]   = useState(false);
-  const [loading, setLoading]             = useState(false);
-  const [oauthLoading, setOauthLoading]   = useState(false);
+  const [email, setEmail]               = useState("");
+  const [password, setPassword]         = useState("");
+  const [firstName, setFirstName]       = useState("");
+  const [lastName, setLastName]         = useState("");
+  const [error, setError]               = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [emailSent, setEmailSent]       = useState(false);
+
+  // Reset state when switching modes
+  useEffect(() => {
+    setError(""); setEmailSent(false); setLoading(false);
+  }, [mode]);
 
   // Close on Escape
   useEffect(() => {
@@ -1165,138 +1158,110 @@ function AuthModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function handleOAuth(provider: "google" | "apple") {
+  async function handleOAuth() {
     const sb = getSupabase();
     if (!sb) { setError("Service unavailable. Please try again."); return; }
     setOauthLoading(true);
     setError("");
-    try {
-      const callbackUrl = `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ""}`;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: callbackUrl },
-      });
-      if (error) { setError(error.message); setOauthLoading(false); }
-      // On success the page navigates away — no cleanup needed
-    } catch {
-      setError("Could not connect. Please try again.");
-      setOauthLoading(false);
-    }
+    const callbackUrl = `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ""}`;
+    const { error: oauthError } = await sb.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: callbackUrl },
+    });
+    if (oauthError) { setError(oauthError.message); setOauthLoading(false); }
+    // On success the browser navigates away — no cleanup needed
   }
-
-  // ── Social buttons shared UI ──────────────────────────────────────────────
-  const SocialButtons = () => (
-    <div className="space-y-2.5">
-      <button
-        type="button"
-        onClick={() => handleOAuth("google")}
-        disabled={oauthLoading}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/12 bg-white px-4 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-60"
-      >
-        {/* Google logo */}
-        <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        {oauthLoading ? "Redirecting…" : "Continue with Google"}
-      </button>
-      <div className="flex items-center gap-3 py-1">
-        <div className="flex-1 border-t border-black/8" />
-        <span className="text-xs text-stone-400">or</span>
-        <div className="flex-1 border-t border-black/8" />
-      </div>
-    </div>
-  );
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setLoading(true);
     const sb = getSupabase();
     if (!sb) { setError("Service unavailable."); setLoading(false); return; }
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
+    const { data, error: signInError } = await sb.auth.signInWithPassword({ email, password });
+    if (signInError) {
       setLoading(false);
-      if (error.message.toLowerCase().includes("email not confirmed")) {
-        setError("Please confirm your email before logging in. Check your inbox for the confirmation link.");
-      } else if (error.message.toLowerCase().includes("invalid login credentials")) {
+      const msg = signInError.message.toLowerCase();
+      if (msg.includes("email not confirmed")) {
+        setError("Please confirm your email first. Check your inbox.");
+      } else if (msg.includes("invalid login credentials") || msg.includes("invalid email or password")) {
         setError("Incorrect email or password.");
       } else {
-        setError(error.message);
+        setError(signInError.message);
       }
       return;
     }
-    // Use maybeSingle so a missing or unreadable profile row never blocks login
-    const { data: profile } = await sb
-      .from("profiles").select("first_name, last_name").eq("id", data.user.id).maybeSingle();
     setLoading(false);
+    const m = data.user.user_metadata ?? {};
     onSuccess({
-      firstName: profile?.first_name ?? (data.user.user_metadata?.first_name as string) ?? "",
-      lastName:  profile?.last_name  ?? (data.user.user_metadata?.last_name  as string) ?? "",
+      firstName: (m.first_name as string) ?? "",
+      lastName:  (m.last_name  as string) ?? "",
       email:     data.user.email ?? "",
     }, false);
   }
 
-  function handleSignupStep1(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!email.includes("@")) { setError("Please enter a valid email."); return; }
-    setStep(2);
-  }
+    if (!firstName.trim()) { setError("First name is required."); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    setLoading(true);
+    const sb = getSupabase();
+    if (!sb) { setError("Service unavailable."); setLoading(false); return; }
+    const { data, error: signUpError } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: firstName.trim(), last_name: lastName.trim() } },
+    });
+    if (signUpError) { setError(signUpError.message); setLoading(false); return; }
 
-  async function handleSignupStep3(e: React.FormEvent) {
-    e.preventDefault();
-    setError(""); setLoading(true);
-    if (!firstName.trim()) { setError("First name is required."); setLoading(false); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); setLoading(false); return; }
-    if (password !== confirmPassword) { setError("Passwords do not match."); setLoading(false); return; }
+    // Best-effort profile row — don't block on failure
+    if (data.user) {
+      await sb.from("profiles").upsert(
+        { id: data.user.id, first_name: firstName.trim(), last_name: lastName.trim() },
+        { onConflict: "id", ignoreDuplicates: true },
+      ).then(() => {});
+    }
 
-    try {
-      const sb = getSupabase();
-      if (!sb) { setError("Service unavailable."); setLoading(false); return; }
-      const { data, error: signUpError } = await sb.auth.signUp({
-        email,
-        password,
-        options: { data: { first_name: firstName, last_name: lastName, role } },
-      });
-      if (signUpError) { setError(signUpError.message); setLoading(false); return; }
-
-      if (data.user) {
-        await sb.from("profiles").upsert({
-          id:         data.user.id,
-          first_name: firstName,
-          last_name:  lastName,
-          role,
-        }, { onConflict: "id" });
-      }
-
-      setLoading(false);
-
-      if (data.session) {
-        // Email confirmation is disabled — session returned immediately, log user in now.
-        onSuccess({ firstName, lastName, email: data.user?.email ?? "" }, true);
-      } else {
-        // Confirmation email sent — show "check your inbox" screen.
-        setStep(4);
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
+    setLoading(false);
+    if (data.session) {
+      // Confirmation disabled — logged in immediately
+      onSuccess({ firstName: firstName.trim(), lastName: lastName.trim(), email: data.user?.email ?? "" }, true);
+    } else {
+      setEmailSent(true);
     }
   }
 
   const inputClass = "w-full rounded-xl border border-black/15 px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";
-  const btnPrimary = "w-full rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700";
+  const btnPrimary = "w-full rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60";
+
+  // ── "Check your email" screen (signup only, when confirmation is on) ────────
+  if (emailSent) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={onClose}>
+        <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl text-center space-y-5" onClick={e => e.stopPropagation()}>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">✉️</div>
+          <div>
+            <p className="text-sm font-semibold text-stone-800">Check your email, {firstName}!</p>
+            <p className="mt-1 text-xs text-stone-400">
+              We sent a confirmation link to{" "}
+              <span className="font-medium text-stone-600">{email}</span>.
+              Click it to activate your account.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className={btnPrimary}>Got it</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
 
-        {/* Close */}
+        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-stone-900">
-            {mode === "login" ? "Log in" : step === 4 ? "You're in! 🎉" : `Create account — Step ${step} of 3`}
+            {mode === "login" ? "Welcome back" : "Create account"}
           </h2>
           <button type="button" onClick={onClose} className="rounded-full p-1.5 text-stone-400 transition hover:bg-stone-100">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -1305,13 +1270,34 @@ function AuthModal({
           </button>
         </div>
 
-        {/* ── Login ── */}
+        {/* Google button */}
+        <button
+          type="button"
+          onClick={handleOAuth}
+          disabled={oauthLoading || loading}
+          className="mb-5 flex w-full items-center justify-center gap-3 rounded-xl border border-black/12 bg-white px-4 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-60"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          {oauthLoading ? "Redirecting…" : "Continue with Google"}
+        </button>
+
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 border-t border-black/8" />
+          <span className="text-xs text-stone-400">or</span>
+          <div className="flex-1 border-t border-black/8" />
+        </div>
+
+        {/* ── Login form ── */}
         {mode === "login" && (
           <form onSubmit={handleLogin} className="space-y-4">
-            <SocialButtons />
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-stone-500">Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} autoFocus />
+              <input type="email" required autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-stone-500">Password</label>
@@ -1331,67 +1317,22 @@ function AuthModal({
           </form>
         )}
 
-        {/* ── Sign up step 1 — Email ── */}
-        {mode === "signup" && step === 1 && (
-          <form onSubmit={handleSignupStep1} className="space-y-4">
-            <SocialButtons />
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-stone-500">Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} autoFocus />
-            </div>
-            {error && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{error}</p>}
-            <button type="submit" className={btnPrimary}>Continue →</button>
-            <p className="text-center text-xs text-stone-400">
-              Already have an account?{" "}
-              <button type="button" onClick={() => onSwitch("login")} className="font-semibold text-amber-600 hover:underline">Log in</button>
-            </p>
-          </form>
-        )}
-
-        {/* ── Sign up step 2 — Role ── */}
-        {mode === "signup" && step === 2 && (
-          <div className="space-y-4">
-            <p className="text-sm text-stone-500">How will you use Vivana?</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole("client")}
-                className={`rounded-2xl border-2 p-4 text-left transition ${role === "client" ? "border-amber-500 bg-amber-50" : "border-stone-200 hover:border-stone-300"}`}
-              >
-                <div className="mb-2 text-2xl">🗺️</div>
-                <p className={`text-sm font-semibold ${role === "client" ? "text-amber-800" : "text-stone-700"}`}>Guest</p>
-                <p className="mt-0.5 text-xs text-stone-400">Discover and book experiences</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("provider")}
-                className={`rounded-2xl border-2 p-4 text-left transition ${role === "provider" ? "border-amber-500 bg-amber-50" : "border-stone-200 hover:border-stone-300"}`}
-              >
-                <div className="mb-2 text-2xl">🏷️</div>
-                <p className={`text-sm font-semibold ${role === "provider" ? "text-amber-800" : "text-stone-700"}`}>Provider</p>
-                <p className="mt-0.5 text-xs text-stone-400">List and sell your services</p>
-              </button>
-            </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} className="flex-1 rounded-full border border-black/15 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">← Back</button>
-              <button type="button" onClick={() => setStep(3)} className="flex-1 rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700">Continue →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Sign up step 3 — Details ── */}
-        {mode === "signup" && step === 3 && (
-          <form onSubmit={handleSignupStep3} className="space-y-4">
-            <p className="text-sm text-stone-500">Almost there — tell us a bit about yourself.</p>
+        {/* ── Signup form ── */}
+        {mode === "signup" && (
+          <form onSubmit={handleSignup} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-stone-500">First name</label>
-                <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ana" className={inputClass} autoFocus />
+                <input type="text" required autoFocus value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ana" className={inputClass} />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-stone-500">Last name</label>
                 <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Silva" className={inputClass} />
               </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-stone-500">Email</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-stone-500">Password</label>
@@ -1402,34 +1343,13 @@ function AuthModal({
                 </button>
               </div>
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-stone-500">Confirm password</label>
-              <input type={showPassword ? "text" : "password"} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repeat password" className={inputClass} />
-            </div>
             {error && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-xs font-medium text-red-600">{error}</p>}
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(2)} disabled={loading} className="flex-1 rounded-full border border-black/15 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">← Back</button>
-              <button type="submit" disabled={loading} className="flex-1 rounded-full bg-amber-600 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60">{loading ? "Creating…" : "Create account"}</button>
-            </div>
+            <button type="submit" disabled={loading} className={btnPrimary}>{loading ? "Creating account…" : "Create account"}</button>
+            <p className="text-center text-xs text-stone-400">
+              Already have an account?{" "}
+              <button type="button" onClick={() => onSwitch("login")} className="font-semibold text-amber-600 hover:underline">Log in</button>
+            </p>
           </form>
-        )}
-
-        {/* ── Sign up step 4 — Success ── */}
-        {mode === "signup" && step === 4 && (
-          <div className="space-y-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">✉️</div>
-            <div>
-              <p className="text-sm font-semibold text-stone-800">Check your email, {firstName}!</p>
-              <p className="mt-1 text-xs text-stone-400">We sent a confirmation link to <span className="font-medium text-stone-600">{email}</span>. Click it to activate your account.</p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className={btnPrimary}
-            >
-              Got it
-            </button>
-          </div>
         )}
 
       </div>

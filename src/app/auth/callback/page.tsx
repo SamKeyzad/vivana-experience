@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { Suspense } from "react";
@@ -8,8 +8,14 @@ function CallbackInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState("");
+  const ran = useRef(false);
 
   useEffect(() => {
+    // Guard against React Strict Mode double-invocation — exchangeCodeForSession
+    // consumes the PKCE code verifier from localStorage and must only run once.
+    if (ran.current) return;
+    ran.current = true;
+
     const sb = getSupabase();
     if (!sb) { router.replace("/"); return; }
 
