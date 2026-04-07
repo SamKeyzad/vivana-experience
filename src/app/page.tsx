@@ -209,12 +209,31 @@ export default function Home() {
       .then(({ data }) => { if (data) setDbListings(data as DBListing[]); });
   }, []);
 
-  // Detect welcome=back param from OAuth redirect and store in ref
+  // Detect welcome=back param OR OAuth errors that Supabase sends to the main page
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const welcome = params.get("welcome");
+    // Check query params (?welcome=back, ?error=...)
+    const qParams = new URLSearchParams(window.location.search);
+    const welcome = qParams.get("welcome");
     if (welcome) {
       welcomeFlagRef.current = welcome;
+    }
+    const qError = qParams.get("error_description") ?? qParams.get("error");
+    if (qError) {
+      setWelcomeToast("Sign-in failed: " + qError.replace(/_/g, " "));
+      setTimeout(() => setWelcomeToast(null), 6000);
+    }
+
+    // Also check hash fragment (#error=... or #access_token=...) — Supabase implicit flow
+    if (window.location.hash) {
+      const hParams = new URLSearchParams(window.location.hash.slice(1));
+      const hError = hParams.get("error_description") ?? hParams.get("error");
+      if (hError) {
+        setWelcomeToast("Sign-in failed: " + hError.replace(/_/g, " "));
+        setTimeout(() => setWelcomeToast(null), 6000);
+      }
+    }
+
+    if (qParams.toString() || window.location.hash) {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
