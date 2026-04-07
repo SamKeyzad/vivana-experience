@@ -6,7 +6,9 @@ export function getSupabase(): SupabaseClient | null {
   if (_supabase === undefined) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    _supabase = url && key ? createClient(url, key) : null;
+    _supabase = url && key
+      ? createClient(url, key, { auth: { flowType: "implicit" } })
+      : null;
     if (!_supabase) console.warn("Supabase env vars missing — auth/db disabled");
   }
   return _supabase;
