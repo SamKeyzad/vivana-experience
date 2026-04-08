@@ -240,13 +240,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       });
       setLoading(false);
 
-      // Best-effort profile enrichment
+      // Best-effort profile enrichment (also picks up role from JWT metadata set by become-host)
+      const metaRole = (meta.role as string) === "provider" ? "provider" : undefined;
       sb.from("profiles")
         .select("first_name, last_name, role")
         .eq("id", uid)
         .maybeSingle()
         .then(({ data: p }) => {
-          const role = p?.role === "provider" ? "provider" : "client";
+          const role = p?.role === "provider" || metaRole === "provider" ? "provider" : "client";
           setUser({
             id:        uid,
             firstName: p?.first_name ?? (meta.first_name as string) ?? "",
@@ -254,8 +255,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             email:     session.user.email ?? "",
             role,
           });
-          if (role === "provider" && !localStorage.getItem("dashViewMode")) {
+          // Auto-switch to host view when user just became a provider (USER_UPDATED event)
+          if (role === "provider" && (event === "USER_UPDATED" || !localStorage.getItem("dashViewMode"))) {
             setViewMode("host");
+            localStorage.setItem("dashViewMode", "host");
           }
         });
     });

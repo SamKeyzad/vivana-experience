@@ -246,6 +246,10 @@ export default function BecomeHostPage() {
       location_pref: locationPref,
     }).eq("id", session.user.id);
 
+    // Sync role into JWT metadata so onAuthStateChange (USER_UPDATED) fires
+    // in the dashboard layout and immediately shows the host nav.
+    await sb.auth.updateUser({ data: { role: "provider" } });
+
     // Insert listings
     for (const listing of listings) {
       if (!listing.title && !listing.description) continue;
@@ -322,7 +326,7 @@ export default function BecomeHostPage() {
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-4xl">🎉</div>
           <h2 className="text-2xl font-bold text-stone-900">You&apos;re a host!</h2>
           <p className="mt-2 text-sm text-stone-500">
-            Your listings are saved as drafts. Review them in your dashboard and publish when you&apos;re ready.
+            Your listings are now live! Guests can already find them on the main page.
           </p>
           <button
             onClick={() => router.push("/dashboard/listings")}

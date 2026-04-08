@@ -18,6 +18,7 @@ type ListingDetail = {
   duration: number | null;
   max_guests: number | null;
   rating: number | null;
+  provider_id: string | null;
   profiles: {
     first_name: string | null;
     last_name: string | null;
@@ -35,18 +36,32 @@ export default function ListingPage() {
   useEffect(() => {
     const sb = getSupabase();
     if (!sb || !id) return;
-    sb.from("listings")
-      .select(`
-        id, title, description, price, price_type, category, city,
-        image, booking_count, duration, max_guests, rating,
-        profiles ( first_name, last_name, avatar, bio )
-      `)
-      .eq("id", id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setListing(data as ListingDetail | null);
-        setLoading(false);
-      });
+
+    async function load() {
+      // Fetch listing first — provider_id references auth.users, not profiles,
+      // so we can't use an implicit PostgREST join for the host info.
+      const { data: row } = await sb!.from("listings")
+        .select("id, title, description, price, price_type, category, city, image, booking_count, duration, max_guests, rating, provider_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (!row) { setLoading(false); return; }
+
+      // Fetch host profile separately using provider_id
+      let profiles = null;
+      if (row.provider_id) {
+        const { data: p } = await sb!.from("profiles")
+          .select("first_name, last_name, avatar, bio")
+          .eq("id", row.provider_id)
+          .maybeSingle();
+        profiles = p;
+      }
+
+      setListing({ ...row, profiles } as ListingDetail);
+      setLoading(false);
+    }
+
+    load();
   }, [id]);
 
   if (loading) {
