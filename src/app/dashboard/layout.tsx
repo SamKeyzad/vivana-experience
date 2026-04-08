@@ -240,14 +240,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       });
       setLoading(false);
 
-      // Best-effort profile enrichment (also picks up role from JWT metadata set by become-host)
+      // Best-effort profile enrichment
       const metaRole = (meta.role as string) === "provider" ? "provider" : undefined;
       sb.from("profiles")
         .select("first_name, last_name, role")
         .eq("id", uid)
         .maybeSingle()
-        .then(({ data: p }) => {
-          const role = p?.role === "provider" || metaRole === "provider" ? "provider" : "client";
+        .then(async ({ data: p }) => {
+          let role: "provider" | "client" =
+            p?.role === "provider" || metaRole === "provider" ? "provider" : "client";
+
+          // Fallback: if profile role isn't "provider", check for existing listings.
+          // This catches hosts whose profile update failed due to RLS or timing.
+          if (role === "client") {
+            const { count } = await sb.from("listings")
+              .select("id", { count: "exact", head: true })
+              .eq("provider_id", uid);
+            if ((count ?? 0) > 0) role = "provider";
+          }
+
           setUser({
             id:        uid,
             firstName: p?.first_name ?? (meta.first_name as string) ?? "",
@@ -255,7 +266,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             email:     session.user.email ?? "",
             role,
           });
-          // Auto-switch to host view when user just became a provider (USER_UPDATED event)
+          // Auto-switch to host view on USER_UPDATED (just became a host)
+          // or if no view preference has been saved yet.
           if (role === "provider" && (event === "USER_UPDATED" || !localStorage.getItem("dashViewMode"))) {
             setViewMode("host");
             localStorage.setItem("dashViewMode", "host");
