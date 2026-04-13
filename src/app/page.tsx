@@ -878,6 +878,15 @@ export default function Home() {
         <div className="mt-6 grid gap-4 grid-cols-2">
           {[
             {
+              href: "/access/fala-portugues",
+              image: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=600&h=450&q=80",
+              alt: "Lisbon street life",
+              category: "Language & Belonging",
+              readTime: "6 min read",
+              title: "Fala português? A few words that open every door in Lisbon.",
+              intro: "You don't need to be fluent. You just need to show that you tried. A field guide to the phrases that move a conversation from exchange to connection.",
+            },
+            {
               href: "/access/learning-portuguese",
               image: "/people_cafe.jpg",
               alt: "People at a Lisbon café",
@@ -885,15 +894,6 @@ export default function Home() {
               readTime: "5 min read",
               title: "Learning Portuguese Changed How I See Lisbon",
               intro: "There's a moment every expat in Lisbon knows. You're sitting in a café, coffee in hand, and the table next to you erupts in laughter.",
-            },
-            {
-              href: "/access/you-came-for-the-weather",
-              image: "/lisbon_weather.jpg",
-              alt: "Lisbon weather",
-              category: "On Staying",
-              readTime: "5 min read",
-              title: "You Came for the Weather. You Stayed for Something Else.",
-              intro: "Everyone has a reason they first come to Lisbon. Usually it's practical. The weather gets you here. Something else keeps you.",
             },
           ].map(card => (
             <Link
