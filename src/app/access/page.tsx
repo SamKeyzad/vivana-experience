@@ -50,6 +50,40 @@ export default function AccessIndexPage() {
       {/* ── Articles grid ───────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-5 pt-12 pb-16">
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+
+          {/* ── Featured: Fala português? ── */}
+          <Link
+            href="/access/fala-portugues"
+            className="group flex flex-col rounded-2xl overflow-hidden border border-black/8 bg-white transition hover:shadow-lg hover:-translate-y-0.5"
+          >
+            <div className="relative w-full aspect-[4/3] overflow-hidden bg-stone-100">
+              <Image
+                src="https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=600&h=450&q=80"
+                alt="Fala português?"
+                fill
+                className="object-cover transition group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, 50vw"
+              />
+            </div>
+            <div className="p-5 flex flex-col flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">
+                Language & Belonging · 6 min read
+              </p>
+              <h2 className="mt-2 text-sm font-semibold text-stone-800 leading-snug">
+                Fala português? A few words that open every door in Lisbon.
+              </h2>
+              <p className="mt-2 text-xs text-stone-500 leading-relaxed flex-1">
+                You don&apos;t need to be fluent. You just need to show that you tried. A field guide to the phrases that move a conversation from exchange to connection.
+              </p>
+              <span className="mt-4 flex items-center gap-1 text-xs font-semibold text-amber-700">
+                Read
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </span>
+            </div>
+          </Link>
+
           {articles.map(article => (
             <Link
               key={article.slug}
